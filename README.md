@@ -11,9 +11,126 @@ npx cap sync
 
 ## API
 
-<docgen-index></docgen-index>
+<docgen-index>
+
+* [`erase()`](#erase)
+* [`logStrokes(...)`](#logstrokes)
+* [`deleteModel(...)`](#deletemodel)
+* [`downloadModel(...)`](#downloadmodel)
+* [`doRecognition(...)`](#dorecognition)
+* [Interfaces](#interfaces)
+
+</docgen-index>
 
 <docgen-api>
-<!-- run docgen to generate docs from the source -->
-<!-- More info: https://github.com/ionic-team/capacitor-docgen -->
+<!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### erase()
+
+```typescript
+erase() => any
+```
+
+Erases natively stored stroke/point/ink data
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### logStrokes(...)
+
+```typescript
+logStrokes(options: XYTOptions) => any
+```
+
+Sends XY coordinate data to native code to be prepared for model inference
+Can include/exclude time values
+
+Ensure all units for coordinates/time are consistent between logs. Unit types don't matter,
+they just need to be the same -- all values are normalized
+
+| Param         | Type                                              | Description                                              |
+| ------------- | ------------------------------------------------- | -------------------------------------------------------- |
+| **`options`** | <code><a href="#xytoptions">XYTOptions</a></code> | - [ X coordinate, Y coordinate, T time in milliseconds ] |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### deleteModel(...)
+
+```typescript
+deleteModel(all?: boolean | undefined, options?: ModelOptions | undefined) => any
+```
+
+Deletes a singular/collection of models downloaded to the device, or all models.
+
+| Param         | Type                                                  | Description                  |
+| ------------- | ----------------------------------------------------- | ---------------------------- |
+| **`all`**     | <code>boolean</code>                                  | deletes all models on device |
+| **`options`** | <code><a href="#modeloptions">ModelOptions</a></code> |                              |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### downloadModel(...)
+
+```typescript
+downloadModel(options?: ModelOptions | undefined) => any
+```
+
+Downloads a singular/collection of models downloaded to the device, or all models.
+
+| Param         | Type                                                  |
+| ------------- | ----------------------------------------------------- |
+| **`options`** | <code><a href="#modeloptions">ModelOptions</a></code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### doRecognition(...)
+
+```typescript
+doRecognition(model?: string | undefined, context?: string | undefined, writingArea?: { w: number; h: number; } | undefined) => any
+```
+
+Runs inference either on the provided model via the model param, or on the default English model.
+All params are optional.
+
+| Param             | Type                                   | Description                                                                                                        |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **`model`**       | <code>string</code>                    | singular model to use for inference                                                                                |
+| **`context`**     | <code>string</code>                    | precontext to provide. Some letters/words may be mistaken for others, use this to disambiguate expected responses. |
+| **`writingArea`** | <code>{ w: number; h: number; }</code> | width and height of the drawing area. Only provide for further context--i.e. if writing two lines of text.         |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### Interfaces
+
+
+#### XYTOptions
+
+| Prop    | Type            |
+| ------- | --------------- |
+| **`x`** | <code>{}</code> |
+| **`y`** | <code>{}</code> |
+| **`t`** | <code>{}</code> |
+
+
+#### ModelOptions
+
+| Prop         | Type                |
+| ------------ | ------------------- |
+| **`model`**  | <code>string</code> |
+| **`models`** | <code>{}</code>     |
+
 </docgen-api>
