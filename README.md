@@ -9,6 +9,40 @@ npm install capacitor-digitalink
 npx cap sync
 ```
 
+## QA Check
+#### For both iOS and Android:
+### IOS
+* Downloading models
+  * download a random model
+  * attempt to download an incorrect model
+  * download an array of models
+* Drawing/Stroke data
+  * draw a bunch of things and see if it breaks?
+  * come up with better QA method than above
+* Erase function
+  * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination
+* Deleting models
+  * (will finish this code 9/7)
+  * Delete singular model
+  * Delete array of models
+  * Delete all models
+
+### IOS
+* Downloading models
+  * download a random model
+  * attempt to download an incorrect model
+  * download an array of models
+* Drawing/Stroke data
+  * draw a bunch of things and see if it breaks?
+  * come up with better QA method than above
+* Erase function
+  * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination
+* Deleting models
+  * (will finish this code 9/7)
+  * Delete singular model
+  * Delete array of models
+  * Delete all models
+
 ## API
 
 <docgen-index>
