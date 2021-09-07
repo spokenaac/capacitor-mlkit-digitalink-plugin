@@ -1,5 +1,6 @@
 package com.spoken.writtenapp;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -28,6 +29,19 @@ public class DigitalInkPlugin extends Plugin {
     public Ink.Stroke.Builder strokeBuilder;
     public DigitalInkRecognizer recognizer;
     public RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
+
+    public DigitalInkPlugin() {
+        try {
+            DigitalInkRecognitionModelIdentifier defaultIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US");
+            DigitalInkRecognitionModel defaultModel = DigitalInkRecognitionModel.builder(defaultIdentifier).build();
+            recognizer = DigitalInkRecognition.getClient(
+                DigitalInkRecognizerOptions.builder(defaultModel).build()
+            );
+        }
+        catch (MlKitException error) {
+            System.out.println(error);
+        }
+    }
 
     @PluginMethod
     public void downloadModel(PluginCall call) {
@@ -60,35 +74,56 @@ public class DigitalInkPlugin extends Plugin {
         }
     }
 
+    public float[] convertToFloatArray(JSArray arr) throws JSONException {
+        float[] floatArr = new float[arr.length()];
+
+        for (int i = 0; i < arr.length(); i++) {
+            if (arr.get(i) instanceof Double) {
+                Double dub = (Double) arr.get(i);
+                floatArr[i] = dub.floatValue();
+            }
+            else if (arr.get(i) instanceof Integer) {
+                int integer = (int) arr.get(i);
+                floatArr[i] = integer;
+            }
+        }
+        return floatArr;
+    }
+
     @PluginMethod
     public void logStrokes(PluginCall call) throws JSONException {
-        com.getcapacitor.JSArray xArr = call.getArray("x");
-        com.getcapacitor.JSArray yArr = call.getArray("y");
-        com.getcapacitor.JSArray tArr = call.getArray("t");
+        float[] xArr = convertToFloatArray(call.getArray("x"));
+        float[] yArr = convertToFloatArray(call.getArray("y"));
+        JSArray tArr = call.getArray("t");
+
+        strokeBuilder = Ink.Stroke.builder();
 
         // if we received time, implement it in the points
         // if not, only do (x,y) coordinates
         // then loop through and create points for each provided coordinate set
         if (tArr.length() != 0) {
-            for (int i = 0; i < xArr.length(); i++) {
-                float x = (float) xArr.get(i);
-                float y = (float) yArr.get(i);
+            for (int i = 0; i < xArr.length; i++) {
+                float x = xArr[i];
+                float y = yArr[i];
                 long t = tArr.getInt(i);
 
                 // create (x, y) point, add to stroke builder
-                strokeBuilder.addPoint(Ink.Point.create(x, y, t));
+                Ink.Point point = Ink.Point.create(x, y);
+                strokeBuilder.addPoint(point);
             }
             // build the stroke, and add the resulting stroke to the ink builder
             inkBuilder.addStroke(strokeBuilder.build());
             strokeBuilder = null;
         }
         else {
-            for (int i = 0; i < xArr.length(); i++) {
-                float x = (float) xArr.get(i);
-                float y = (float) yArr.get(i);
+            for (int i = 0; i < xArr.length; i++) {
+                // check what type the coordinates are
+                // possible: Double, Integer
+                float x = xArr[i];
+                float y = yArr[i];
 
-                // create (x, y) point, add to stroke builder
-                strokeBuilder.addPoint(Ink.Point.create(x, y));
+                Ink.Point point = Ink.Point.create(x, y);
+                strokeBuilder.addPoint(point);
             }
             // build the stroke, and add the resulting stroke to the ink builder
             inkBuilder.addStroke(strokeBuilder.build());
@@ -101,6 +136,7 @@ public class DigitalInkPlugin extends Plugin {
         strokeBuilder = null;
         inkBuilder = null;
         inkBuilder = Ink.builder();
+        strokeBuilder = Ink.Stroke.builder();
 
         JSObject res = new JSObject();
         res.put("ok", true);
@@ -111,8 +147,9 @@ public class DigitalInkPlugin extends Plugin {
 
     @PluginMethod
     public void doRecognition(PluginCall call) {
-        String[] candidateText = null;
-        Float[] candidateScore = null;
+        JSArray candidateText = new JSArray();
+        JSArray candidateScore = new JSArray();
+
         JSObject res = new JSObject();
         JSObject candidateInfo = new JSObject();
 
@@ -123,9 +160,9 @@ public class DigitalInkPlugin extends Plugin {
         recognizer.recognize(ink)
             .addOnSuccessListener(
                 result -> {
-                    for (int i = 0; i < result.getCandidates().size(); i++) {
-                        candidateText[i] = result.getCandidates().get(i).getText();
-                        candidateScore[i] = result.getCandidates().get(i).getScore();
+                    for (int i = 0; i < 10; i++) {
+                        candidateText.put(result.getCandidates().get(i).getText());
+                        candidateScore.put(result.getCandidates().get(i).getScore());
                     }
                     candidateInfo.put("candidates", candidateText);
                     candidateInfo.put("scores", candidateScore);
@@ -133,6 +170,8 @@ public class DigitalInkPlugin extends Plugin {
                     res.put("ok", true);
                     res.put("msg", "Recognized successfully");
                     res.put("results", candidateInfo);
+
+                    call.resolve(res);
                 }
             )
             .addOnFailureListener(
