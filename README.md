@@ -16,9 +16,9 @@ npx cap sync
 ### Android
 * downloadModel()
   * download a model
-    * verify error thrown if incorrect model
-    * verify non-error response notifying that model is already downloaded 
-    * verify non-error if model is not already downloaded
+    * verify error thrown if incorrect model :white_check_mark:
+    * verify non-error response notifying that model is already downloaded :white_check_mark:
+    * verify non-error if model is not already downloaded :white_check_mark:
   * download an array of models
     * verify non-error if models are already downloaded
     * verify non-error if some models are downloaded, and some need to be downloaded

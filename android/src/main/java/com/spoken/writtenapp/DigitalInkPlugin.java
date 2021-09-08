@@ -7,6 +7,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import com.google.android.gms.tasks.Task;
 import com.google.mlkit.common.MlKitException;
 import com.google.mlkit.common.model.DownloadConditions;
 import com.google.mlkit.common.model.RemoteModelManager;
@@ -48,7 +49,10 @@ public class DigitalInkPlugin extends Plugin {
         }
         // TODO better catch here
         catch (MlKitException error) {
+            System.out.println(" ");
+            System.out.println("Initialization error...");
             System.out.println(error);
+            System.out.println(" ");
         }
     }
 
@@ -72,7 +76,7 @@ public class DigitalInkPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void checkSingularModel(String langTag, PluginCall call, RemoteModelManager remoteModelManager) {
+    public void checkSingularModel(String langTag, PluginCall call, RemoteModelManager remoteModelManager, Boolean keepAlive) {
         // instantiate response object
         JSObject res = new JSObject();
 
@@ -86,13 +90,7 @@ public class DigitalInkPlugin extends Plugin {
          *
          * */
 
-        System.out.println(" ");
-        System.out.println(" ");
-        System.out.println("checkSingularModel()");
-        System.out.println(" ");
-        System.out.println(" ");
-
-        // try block checks for whether or not provided language tag is a legit tag
+        // checks for whether or not provided language tag is a legit tag
         try {
             // instantiate identifier
             DigitalInkRecognitionModelIdentifier identifier =
@@ -108,35 +106,90 @@ public class DigitalInkPlugin extends Plugin {
                 .addOnCompleteListener(result -> {
                     // if the model is already downloaded
                     if (result.getResult()) {
-                        res.put("ok", true);
-                        res.put("msg", langTag + " is already downloaded.");
+                        // if the call keepAlive matches what was provided, then nothing is changing
+                        // and we shouldn't change the value, just resolve the call.
+                        if (keepAlive) {
+                            System.out.println(" ");
+                            System.out.println("Not the last model to check. Skipping...");
+                            System.out.println(" ");
+                            //res.put("ok", true);
+                            //res.put("msg", langTag + " is already downloaded.");
+                            //call.resolve(res);
+                        }
+                        // else, the call keepAlive doesn't match, which means we need to switch
+                        // the value to the provided boolean
+                        else {
+                            //call.setKeepAlive(keepAlive);
+                            System.out.println(" ");
+                            System.out.println("Last model to check. resolving call...");
+                            System.out.println(" ");
 
-                        call.resolve(res);
+                            res.put("ok", true);
+                            res.put("msg", "Download success. One or more were already downloaded.");
+                            call.resolve(res);
+                        }
                     }
                     // if the model is not already downloaded
                     else {
                         // download the new model
                         remoteModelManager
-                            .download(model, new DownloadConditions.Builder().build())
-                            // When model is done downloading
-                            .addOnCompleteListener(response -> {
-                                // all is well, resolve the call
-                                if (response.isSuccessful()) {
+                        .download(model, new DownloadConditions.Builder().build())
+                        // When model is done downloading
+                        .addOnCompleteListener(response -> {
+                            // all is well, resolve the call
+                            if (response.isSuccessful()) {
+                                // if the call keepAlive matches what was provided, then nothing is changing
+                                // and we shouldn't change the value, just resolve the call.
+                                if (keepAlive) {
+                                    System.out.println(" ");
+                                    System.out.println("Not the last model to download. Skipping...");
+                                    System.out.println(" ");
+                                    //res.put("ok", true);
+                                    //res.put("msg", "Model downloaded successfully.");
+                                    //call.resolve(res);
+                                }
+                                // else, the call keepAlive doesn't match, which means we need to switch
+                                // the value to the provided boolean
+                                else {
+                                    System.out.println(" ");
+                                    System.out.println("Last model to download. Resolving call...");
+                                    System.out.println(" ");
+                                    //call.setKeepAlive(keepAlive);
                                     res.put("ok", true);
-                                    res.put("msg", "Model downloaded successfully.");
-
+                                    res.put("msg", "Download success.");
                                     call.resolve(res);
                                 }
-                            })
-                            // if we failed, reject the call
-                            .addOnFailureListener(
-                                    error -> call.reject(error.toString())
-                            );
+                            }
+                        })
+                        // if we failed, reject the call
+                        .addOnFailureListener(error -> {
+                            // if the call keepAlive matches what was provided, then nothing is changing
+                            // and we shouldn't change the value, just resolve the call.
+                            if (call.isKeptAlive() == keepAlive) {
+                                call.reject(error.toString());
+                            }
+                            // else, the call keepAlive doesn't match, which means we need to switch
+                            // the value to the provided boolean
+                            else {
+                                //call.setKeepAlive(keepAlive);
+                                call.reject(error.toString());
+                            }
+                        });
                     }
                 });
         }
         catch (MlKitException error) {
-            call.reject(error.toString());
+            // if the call keepAlive matches what was provided, then nothing is changing
+            // and we shouldn't change the value, just resolve the call.
+            if (call.isKeptAlive() == keepAlive) {
+                call.reject(error.toString());
+            }
+            // else, the call keepAlive doesn't match, which means we need to switch
+            // the value to the provided boolean
+            else {
+                //call.setKeepAlive(keepAlive);
+                call.reject(error.toString());
+            }
         }
     }
 
@@ -191,10 +244,15 @@ public class DigitalInkPlugin extends Plugin {
     // Downloads specified model
     // Checks if model is already downloaded
     // Also takes array of models (download multiple, check if any have already downloaded, etc.)
+
     @PluginMethod
     public void downloadModel(PluginCall call) {
         // instantiate response object
         JSObject res = new JSObject();
+
+        // Downloading models is asynchronous, so we send multiple
+        // responses to notify when processing, and on each completed download.
+        // call.setKeepAlive(true);
 
         // Model manager that manages already downloaded models, downloading models, and deleting models
         RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
@@ -204,7 +262,13 @@ public class DigitalInkPlugin extends Plugin {
             // get singular model specified from client
             String langTag = call.getString("model");
 
-            checkSingularModel(langTag, call, remoteModelManager);
+            checkSingularModel(langTag, call, remoteModelManager, false);
+
+            // send some data back to client
+            // last call will resolve in the completion callback of checkSingularModel
+            //res.put("ok", true);
+            //res.put("msg", "Processing model...");
+            //call.resolve(res);
         }
         // If we received an array of models
         else if (call.getData().has("models")) {
@@ -212,8 +276,14 @@ public class DigitalInkPlugin extends Plugin {
 
             // iterate through and check each if already downloaded, if not download, etc.
             for (int i = 0; i < langTags.length(); i++) {
+                // if its the last one in the loop
+                Boolean trueIfLast = !(i == langTags.length() - 1);
+
                 try {
-                    checkSingularModel((String) langTags.get(i), call, remoteModelManager);
+                    // if this is the last download, pass in true
+                    // if not, pass in false
+                    // true/false determine whether or not the last call resolves the call for good
+                    checkSingularModel((String) langTags.get(i), call, remoteModelManager, trueIfLast);
                 }
                 // catch this weird error
                 catch (JSONException error) {
@@ -222,8 +292,13 @@ public class DigitalInkPlugin extends Plugin {
             }
         }
         // If we didn't receive any models at all, download the default en-US model
+        // this is the only download, so resolve the call when finished
         else {
-            checkSingularModel("en-US", call, remoteModelManager);
+            checkSingularModel("en-US", call, remoteModelManager, false);
+
+            //res.put("ok", true);
+            //res.put("msg", "No model provided - default en-US downloading...");
+            //call.resolve(res);
         }
     }
 
