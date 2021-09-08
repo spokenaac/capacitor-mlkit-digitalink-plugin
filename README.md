@@ -12,7 +12,7 @@ npx cap sync
 ## QA Check
 ### Android
 * downloadModel()
-  * download a random model
+  * download a model
     * verify error thrown if incorrect model
     * verify non-error response notifying that model is already downloaded 
     * verify non-error if model is already downloaded
@@ -27,6 +27,8 @@ npx cap sync
   * verify error if we send non-numerical coordinate data for x, y, or t
   * verify error if we send any kind of number for t
   * verify non-error if we send any kind of number for x or y
+  * verify non-error if we send time along with x and y
+  * verify success response sent to client
   * draw a bunch of things and see if it breaks?
 * erase()
   * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination
@@ -43,7 +45,7 @@ npx cap sync
 
 ### IOS
 * downloadModel()
-  * download a random model
+  * download a model
     * verify error thrown if incorrect model
     * verify non-error response notifying that model is already downloaded 
     * verify non-error if model is already downloaded
@@ -58,6 +60,8 @@ npx cap sync
   * verify error if we send non-numerical coordinate data for x, y, or t
   * verify error if we send any kind of number for t
   * verify non-error if we send any kind of number for x or y
+  * verify non-error if we send time along with x and y
+  * verify success response sent to client
   * draw a bunch of things and see if it breaks?
 * erase()
   * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination
