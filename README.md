@@ -10,6 +10,9 @@ npx cap sync
 ```
 
 ## QA Check
+:white_check_mark: = passed
+:x: = fix needed
+
 ### Android
 * downloadModel()
   * download a model
