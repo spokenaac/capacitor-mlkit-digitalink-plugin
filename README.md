@@ -18,7 +18,6 @@ npx cap sync
   * download a model
     * verify error thrown if incorrect model
     * verify non-error response notifying that model is already downloaded 
-    * verify non-error if model is already downloaded
     * verify non-error if model is not already downloaded
   * download an array of models
     * verify non-error if models are already downloaded
@@ -51,7 +50,6 @@ npx cap sync
   * download a model
     * verify error thrown if incorrect model
     * verify non-error response notifying that model is already downloaded 
-    * verify non-error if model is already downloaded
     * verify non-error if model is not already downloaded
   * download an array of models
     * verify non-error if models are already downloaded
