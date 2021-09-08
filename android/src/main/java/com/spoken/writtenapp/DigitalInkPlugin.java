@@ -71,6 +71,7 @@ public class DigitalInkPlugin extends Plugin {
         return floatArr;
     }
 
+    @PluginMethod
     public void checkSingularModel(String langTag, PluginCall call, RemoteModelManager remoteModelManager) {
         // instantiate response object
         JSObject res = new JSObject();
@@ -199,14 +200,14 @@ public class DigitalInkPlugin extends Plugin {
         RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
         // If we received a singular model
-        if (!call.getData().has("model")) {
+        if (call.getData().has("model")) {
             // get singular model specified from client
             String langTag = call.getString("model");
 
             checkSingularModel(langTag, call, remoteModelManager);
         }
         // If we received an array of models
-        else if (!call.getData().has("models")) {
+        else if (call.getData().has("models")) {
             JSArray langTags = call.getArray("models");
 
             // iterate through and check each if already downloaded, if not download, etc.
