@@ -83,9 +83,10 @@ npx cap sync
 
 * [`erase()`](#erase)
 * [`logStrokes(...)`](#logstrokes)
-* [`deleteModel(...)`](#deletemodel)
-* [`downloadModel(...)`](#downloadmodel)
 * [`doRecognition(...)`](#dorecognition)
+* [`downloadSingularModel(...)`](#downloadsingularmodel)
+* [`downloadMultipleModels(...)`](#downloadmultiplemodels)
+* [`deleteModel(...)`](#deletemodel)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -127,55 +128,77 @@ they just need to be the same -- all values are normalized
 --------------------
 
 
-### deleteModel(...)
-
-```typescript
-deleteModel(all?: boolean | undefined, options?: ModelOptions | undefined) => any
-```
-
-Deletes a singular/collection of models downloaded to the device, or all models.
-
-| Param         | Type                                                  | Description                  |
-| ------------- | ----------------------------------------------------- | ---------------------------- |
-| **`all`**     | <code>boolean</code>                                  | deletes all models on device |
-| **`options`** | <code><a href="#modeloptions">ModelOptions</a></code> |                              |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
-### downloadModel(...)
-
-```typescript
-downloadModel(options?: ModelOptions | undefined) => any
-```
-
-Downloads a singular/collection of models downloaded to the device, or all models.
-
-| Param         | Type                                                  |
-| ------------- | ----------------------------------------------------- |
-| **`options`** | <code><a href="#modeloptions">ModelOptions</a></code> |
-
-**Returns:** <code>any</code>
-
---------------------
-
-
 ### doRecognition(...)
 
 ```typescript
-doRecognition(model?: string | undefined, context?: string | undefined, writingArea?: { w: number; h: number; } | undefined) => any
+doRecognition(options: RecognitionOptions) => any
 ```
 
 Runs inference either on the provided model via the model param, or on the default English model.
 All params are optional.
 
-| Param             | Type                                   | Description                                                                                                        |
-| ----------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **`model`**       | <code>string</code>                    | singular model to use for inference                                                                                |
-| **`context`**     | <code>string</code>                    | precontext to provide. Some letters/words may be mistaken for others, use this to disambiguate expected responses. |
-| **`writingArea`** | <code>{ w: number; h: number; }</code> | width and height of the drawing area. Only provide for further context--i.e. if writing two lines of text.         |
+| Param         | Type                                                              |
+| ------------- | ----------------------------------------------------------------- |
+| **`options`** | <code><a href="#recognitionoptions">RecognitionOptions</a></code> |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### downloadSingularModel(...)
+
+```typescript
+downloadSingularModel(model: Model, callback: SingularModelCallback) => any
+```
+
+Downloads singular model.
+
+Last callback has the 'done' property set to true, and signals the last callback.
+
+| Param          | Type                                                      | Description                                                                             |
+| -------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **`model`**    | <code><a href="#model">Model</a></code>                   | model to download. Native code checks if model is valid and if it's already downloaded. |
+| **`callback`** | <code>(response: Response, error?: any) =&gt; void</code> | callback function that runs each time data is sent from the native code.                |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### downloadMultipleModels(...)
+
+```typescript
+downloadMultipleModels(models: Models, callback: MultipleModelCallback) => any
+```
+
+Downloads multiple models from a given array.
+Callback function will return a response or an error dependent on whether a given model has
+already been downloaded, is a valid/invalid model, or is finished being downloaded.
+
+The last model will be have the 'done' property set to true and signals the last callback.
+
+| Param          | Type                                                      | Description                                                     |
+| -------------- | --------------------------------------------------------- | --------------------------------------------------------------- |
+| **`models`**   | <code><a href="#models">Models</a></code>                 | array of models to download.                                    |
+| **`callback`** | <code>(response: Response, error?: any) =&gt; void</code> | callback that runs each time data is sent from the native code. |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### deleteModel(...)
+
+```typescript
+deleteModel(options: DeleteModelOptions) => any
+```
+
+Deletes a singular/collection of models downloaded to the device, or all models.
+
+| Param         | Type                                                              | Description                                                 |
+| ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| **`options`** | <code><a href="#deletemodeloptions">DeleteModelOptions</a></code> | delete all models, a singular model, or an array of models. |
 
 **Returns:** <code>any</code>
 
@@ -194,11 +217,35 @@ All params are optional.
 | **`t`** | <code>{}</code> |
 
 
-#### ModelOptions
+#### RecognitionOptions
 
-| Prop         | Type                |
-| ------------ | ------------------- |
-| **`model`**  | <code>string</code> |
-| **`models`** | <code>{}</code>     |
+| Prop              | Type                                   |
+| ----------------- | -------------------------------------- |
+| **`model`**       | <code>string</code>                    |
+| **`context`**     | <code>string</code>                    |
+| **`writingArea`** | <code>{ w: number; h: number; }</code> |
+
+
+#### Model
+
+| Prop        | Type                |
+| ----------- | ------------------- |
+| **`model`** | <code>string</code> |
+
+
+#### Models
+
+| Prop         | Type            |
+| ------------ | --------------- |
+| **`models`** | <code>{}</code> |
+
+
+#### DeleteModelOptions
+
+| Prop         | Type                 |
+| ------------ | -------------------- |
+| **`all`**    | <code>boolean</code> |
+| **`model`**  | <code>string</code>  |
+| **`models`** | <code>{}</code>      |
 
 </docgen-api>

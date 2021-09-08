@@ -1,6 +1,7 @@
 import { WebPlugin } from '@capacitor/core';
+import { CallbackID, DeleteModelOptions, Model, Models, MultipleModelCallback, RecognitionOptions, SingularModelCallback } from '.';
 
-import type { XYTOptions, ModelOptions, DigitalInkPlugin } from './definitions';
+import type { XYTOptions, DigitalInkPlugin } from './definitions';
 
 export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
   async erase(): Promise<{ ok: boolean, msg: string }> {
@@ -17,40 +18,42 @@ export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
       msg: "LOGSTROKES() We are in web debug"
     }
   }
-
-  async deleteModel(all?: boolean, options?: ModelOptions): Promise<{ ok: boolean, all: boolean, msg: string, options?: ModelOptions }> {
-    return {
-      ok: false,
-      options: options,
-      all: all || false,
-      msg: "DELETEMODEL() We are in web debug"
-    }
-  }
-
-  async downloadModel(options: ModelOptions): Promise<{ ok: boolean, msg: string, options?: ModelOptions }> {
-    return {
-      ok: false,
-      options: options,
-      msg: 'DOWNLOADMODEL() We are in web debug'
-    }
-  }
   
-  async doRecognition(model?: string, context?: string, writingArea?: { w: number, h: number })
+  async doRecognition(options: RecognitionOptions)
   :Promise<{
     ok: boolean,
     msg: string,
-    model?: string,
-    context?: string,
-    writingArea?: { w: number, h: number }
     results: { candidates: string[], scores: number[] },
+    options: RecognitionOptions
   }> {
     return {
       ok: false,
-      model: model,
-      context: context,
-      writingArea: writingArea,
       msg: 'DORECOGNITION() We are in web debug',
-      results: { candidates: ['a', 'b', 'c'], scores: [0, 1, 2] }
+      results: {
+        candidates: ['a', 'b', 'c'],
+        scores: [0, 1, 2]
+      },
+      options: options
+    }
+  }
+
+  async downloadSingularModel(model: Model, callback: SingularModelCallback): Promise<CallbackID> {
+    console.log({"Options": model, "Callback": callback})
+    
+    return "WEB DEBUG CALLBACK ID SINGULAR"
+  }
+
+  async downloadMultipleModels(models: Models, callback: MultipleModelCallback): Promise<CallbackID> {
+    console.log({"Options": models, "Callback": callback})
+    
+    return "WEB DEBUG CALLBACK ID MULTIPLE"
+  }
+
+  async deleteModel(options: DeleteModelOptions): Promise<{options: DeleteModelOptions, ok: boolean, msg: string}> {
+    return {
+      ok: false,
+      msg: "DELETEMODEL() We are in web debug",
+      options: options
     }
   }
 }

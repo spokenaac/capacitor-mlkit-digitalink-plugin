@@ -11,6 +11,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.mlkit.common.MlKitException;
 import com.google.mlkit.common.model.DownloadConditions;
 import com.google.mlkit.common.model.RemoteModelManager;
+import com.google.mlkit.common.model.RemoteModel;
 
 import com.google.mlkit.vision.digitalink.DigitalInkRecognition;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModel;
@@ -23,6 +24,8 @@ import org.json.JSONException;
 
 import java.lang.reflect.Array;
 import java.util.Dictionary;
+import java.util.Iterator;
+import java.util.Set;
 
 @CapacitorPlugin(name = "DigitalInk")
 public class DigitalInkPlugin extends Plugin {
@@ -56,9 +59,6 @@ public class DigitalInkPlugin extends Plugin {
         }
     }
 
-    // Not a plugin method
-    // Converts array of Double/Integer values into array of float values
-    // recognizer needs coordinates as: (x: float, y: float, t: long)
     public float[] convertToFloatArray(JSArray arr) throws JSONException {
         float[] floatArr = new float[arr.length()];
 
@@ -75,11 +75,18 @@ public class DigitalInkPlugin extends Plugin {
         return floatArr;
     }
 
-    @PluginMethod
-    public void checkSingularModel(String langTag, PluginCall call, RemoteModelManager remoteModelManager, Boolean keepAlive) {
-        // instantiate response object
-        JSObject res = new JSObject();
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    public void downloadSingularModel(PluginCall call) {
+        // Keep call alive so we can resolve() multiple times
+        call.setKeepAlive(true);
 
+        // Model manager that manages already downloaded models, downloading models, and deleting models
+        RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
+
+        // get singular model specified from client
+        String langTag = call.getString("model");
+
+        // instantiate response object
         /*
          * Response structure:
          *
@@ -89,221 +96,230 @@ public class DigitalInkPlugin extends Plugin {
          * }
          *
          * */
+        JSObject res = new JSObject();
 
         // checks for whether or not provided language tag is a legit tag
         try {
             // instantiate identifier
             DigitalInkRecognitionModelIdentifier identifier =
-                DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
+                    DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
 
             // build the model from the valid language tag
             DigitalInkRecognitionModel model =
                     DigitalInkRecognitionModel.builder(identifier).build();
 
+            // notifies client that model is being checked/downloaded
+            res.put("ok", true);
+            res.put("msg", "Processing singular model " + langTag + "...");
+            call.resolve(res);
+
             // check if model is already downloaded
             remoteModelManager.isModelDownloaded(model)
-                // on completion of the check
-                .addOnCompleteListener(result -> {
+            .addOnCompleteListener(result -> {
+                if (result.getResult()) {
                     // if the model is already downloaded
-                    if (result.getResult()) {
-                        // if the call keepAlive matches what was provided, then nothing is changing
-                        // and we shouldn't change the value, just resolve the call.
-                        if (keepAlive) {
-                            System.out.println(" ");
-                            System.out.println("Not the last model to check. Skipping...");
-                            System.out.println(" ");
-                            //res.put("ok", true);
-                            //res.put("msg", langTag + " is already downloaded.");
-                            //call.resolve(res);
-                        }
-                        // else, the call keepAlive doesn't match, which means we need to switch
-                        // the value to the provided boolean
-                        else {
-                            //call.setKeepAlive(keepAlive);
-                            System.out.println(" ");
-                            System.out.println("Last model to check. resolving call...");
-                            System.out.println(" ");
-
+                    res.put("ok", true);
+                    res.put("msg", langTag + " model is already downloaded.");
+                    call.setKeepAlive(false);
+                    call.resolve(res);
+                }
+                else {
+                    // if the model is not already downloaded, download the new model
+                    remoteModelManager
+                    .download(model, new DownloadConditions.Builder().build())
+                    .addOnCompleteListener(response -> {
+                        if (response.isSuccessful()) {
+                            // all is well, resolve the call
                             res.put("ok", true);
-                            res.put("msg", "Download success. One or more were already downloaded.");
+                            res.put("msg", langTag + " model was downloaded successfully.");
+                            call.setKeepAlive(false);
                             call.resolve(res);
                         }
-                    }
-                    // if the model is not already downloaded
-                    else {
-                        // download the new model
-                        remoteModelManager
-                        .download(model, new DownloadConditions.Builder().build())
-                        // When model is done downloading
-                        .addOnCompleteListener(response -> {
-                            // all is well, resolve the call
-                            if (response.isSuccessful()) {
-                                // if the call keepAlive matches what was provided, then nothing is changing
-                                // and we shouldn't change the value, just resolve the call.
-                                if (keepAlive) {
-                                    System.out.println(" ");
-                                    System.out.println("Not the last model to download. Skipping...");
-                                    System.out.println(" ");
-                                    //res.put("ok", true);
-                                    //res.put("msg", "Model downloaded successfully.");
-                                    //call.resolve(res);
-                                }
-                                // else, the call keepAlive doesn't match, which means we need to switch
-                                // the value to the provided boolean
-                                else {
-                                    System.out.println(" ");
-                                    System.out.println("Last model to download. Resolving call...");
-                                    System.out.println(" ");
-                                    //call.setKeepAlive(keepAlive);
-                                    res.put("ok", true);
-                                    res.put("msg", "Download success.");
-                                    call.resolve(res);
-                                }
-                            }
-                        })
-                        // if we failed, reject the call
-                        .addOnFailureListener(error -> {
-                            // if the call keepAlive matches what was provided, then nothing is changing
-                            // and we shouldn't change the value, just resolve the call.
-                            if (call.isKeptAlive() == keepAlive) {
-                                call.reject(error.toString());
-                            }
-                            // else, the call keepAlive doesn't match, which means we need to switch
-                            // the value to the provided boolean
-                            else {
-                                //call.setKeepAlive(keepAlive);
-                                call.reject(error.toString());
-                            }
-                        });
-                    }
-                });
+                    })
+                    .addOnFailureListener(error -> {
+                        // we failed, reject the call
+                        call.setKeepAlive(false);
+                        call.reject(error.toString());
+                    });
+                }
+            });
         }
         catch (MlKitException error) {
-            // if the call keepAlive matches what was provided, then nothing is changing
-            // and we shouldn't change the value, just resolve the call.
-            if (call.isKeptAlive() == keepAlive) {
-                call.reject(error.toString());
-            }
-            // else, the call keepAlive doesn't match, which means we need to switch
-            // the value to the provided boolean
-            else {
-                //call.setKeepAlive(keepAlive);
-                call.reject(error.toString());
-            }
+            call.setKeepAlive(false);
+            call.reject(error.toString());
         }
     }
 
-    public void recognize(Ink ink, PluginCall call) {
-        JSArray candidateText = new JSArray();
-        JSArray candidateScore = new JSArray();
-        JSObject candidateInfo = new JSObject();
-        JSObject res = new JSObject();
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    public void downloadMultipleModels(PluginCall call) {
+        // Keep call alive so we can resolve() multiple times
+        call.setKeepAlive(true);
 
+        // Model manager that manages already downloaded models, downloading models, and deleting models
+        RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
+
+        // get singular model specified from client
+        JSArray langTags = call.getArray("models");
+
+        // instantiate response object
         /*
          * Response structure:
          *
          * {
          *   ok: boolean,
          *   msg: string,
-         *   results: { candidates: string[], scores: number[] },
-         *   model: string | undefined (Optional),
-         *   context: string | undefined (Optional),
-         *   writingArea: { w: number, h: number } | undefined (Optional)
          * }
          *
          * */
-        
-        // recognize ink data
-        recognizer.recognize(ink)
-                .addOnSuccessListener(
-                        result -> {
-                            // iterate through candidates and format into JSArray for response
-                            for (int i = 0; i < result.getCandidates().size(); i++) {
-                                candidateText.put(result.getCandidates().get(i).getText());
-                                candidateScore.put(result.getCandidates().get(i).getScore());
-                            }
-
-                            // add JSArrays into JSObject for response
-                            candidateInfo.put("candidates", candidateText);
-                            candidateInfo.put("scores", candidateScore);
-
-                            res.put("ok", true);
-                            res.put("msg", "Recognized successfully");
-                            res.put("results", candidateInfo);
-
-                            // send responses back to the client
-                            call.resolve(res);
-                        }
-                )
-                .addOnFailureListener(
-                        error -> {
-                            call.reject(error.toString());
-                        }
-                );
-    }
-    // Downloads specified model
-    // Checks if model is already downloaded
-    // Also takes array of models (download multiple, check if any have already downloaded, etc.)
-
-    @PluginMethod
-    public void downloadModel(PluginCall call) {
-        // instantiate response object
         JSObject res = new JSObject();
 
-        // Downloading models is asynchronous, so we send multiple
-        // responses to notify when processing, and on each completed download.
-        // call.setKeepAlive(true);
+        res.put("ok", true);
+        res.put("done", false);
+        res.put("msg", "Processing array of models...");
+        call.resolve(res);
+
+        for (int i = 0; i < langTags.length(); i++) {
+            Boolean lastModel = (i == langTags.length() - 1);
+
+            try {
+                // get current langTag
+                String langTag = (String) langTags.get(i);
+
+                // instantiate identifier
+                DigitalInkRecognitionModelIdentifier identifier =
+                        DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
+
+                // build the model from the valid language tag
+                DigitalInkRecognitionModel model =
+                        DigitalInkRecognitionModel.builder(identifier).build();
+
+                // check if model is already downloaded
+                remoteModelManager.isModelDownloaded(model)
+                .addOnCompleteListener(result -> {
+                    if (result.getResult()) {
+                        // if the model is already downloaded
+                        res.put("ok", true);
+                        res.put("done", lastModel);
+                        res.put("msg", langTag + " model is already downloaded.");
+                        call.resolve(res);
+
+                        if (lastModel) {
+                            // it's the last model, this should be last call resolve
+                            call.setKeepAlive(false);
+                        }
+                    }
+                    else {
+                        // if the model is not already downloaded, download the new model
+                        remoteModelManager
+                        .download(model, new DownloadConditions.Builder().build())
+                        .addOnCompleteListener(response -> {
+                            if (response.isSuccessful()) {
+                                // all is well, resolve the call
+                                res.put("ok", true);
+                                res.put("done", lastModel);
+                                res.put("msg", langTag + " model was downloaded successfully.");
+
+                                call.resolve(res);
+
+                                if (lastModel) {
+                                    // it's the last model, this should be last call resolve
+                                    call.setKeepAlive(false);
+                                }
+                            }
+                        })
+                        .addOnFailureListener(error -> {
+                            // we failed, reject the call
+                            call.reject(error.toString());
+
+                            if (lastModel) {
+                                // it's the last model, this should be last call resolve
+                                call.setKeepAlive(false);
+                            }
+                        });
+                    }
+                });
+            }
+            catch (MlKitException error) {
+                call.reject(error.toString());
+
+                if (lastModel) {
+                    // it's the last model, this should be last call resolve
+                    call.setKeepAlive(false);
+                }
+
+            }
+            catch (JSONException error) {
+                call.reject(error.toString());
+
+                if (lastModel) {
+                    // it's the last model, this should be last call resolve
+                    call.setKeepAlive(false);
+                }
+            }
+        }
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    public void deleteModel(PluginCall call) {
+        // Keep call alive so we can resolve() multiple times
+        call.setKeepAlive(true);
+
+        // instantiate response object
+        /*
+         * Response structure:
+         *
+         * {
+         *   ok: boolean,
+         *   msg: string,
+         * }
+         *
+         * */
+        JSObject res = new JSObject();
 
         // Model manager that manages already downloaded models, downloading models, and deleting models
         RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
-        // If we received a singular model
-        if (call.getData().has("model")) {
-            // get singular model specified from client
-            String langTag = call.getString("model");
+        if (call.getData().has("all")) {
+            // we want to delete all models
+            remoteModelManager.getDownloadedModels(RemoteModel.class)
+            .addOnCompleteListener(result -> {
+                Set downloadedModels = result.getResult();
 
-            checkSingularModel(langTag, call, remoteModelManager, false);
+                Iterator modelsIter = downloadedModels.iterator();
 
-            // send some data back to client
-            // last call will resolve in the completion callback of checkSingularModel
-            //res.put("ok", true);
-            //res.put("msg", "Processing model...");
-            //call.resolve(res);
-        }
-        // If we received an array of models
-        else if (call.getData().has("models")) {
-            JSArray langTags = call.getArray("models");
+                RemoteModel modelToDelete = (RemoteModel) modelsIter.next();
 
-            // iterate through and check each if already downloaded, if not download, etc.
-            for (int i = 0; i < langTags.length(); i++) {
-                // if its the last one in the loop
-                Boolean trueIfLast = !(i == langTags.length() - 1);
-
-                try {
-                    // if this is the last download, pass in true
-                    // if not, pass in false
-                    // true/false determine whether or not the last call resolves the call for good
-                    checkSingularModel((String) langTags.get(i), call, remoteModelManager, trueIfLast);
+                while (modelsIter.hasNext()) {
+                    remoteModelManager.deleteDownloadedModel(modelToDelete)
+                    .addOnCompleteListener(deleteResult -> {
+                        if (deleteResult.isSuccessful()) {
+                            // deletion was successful
+                            res.put("ok", true);
+                            res.put("msg", modelToDelete.getModelName() + " has been deleted")
+                            call.resolve(res);
+                        }
+                    });
                 }
-                // catch this weird error
-                catch (JSONException error) {
-                    call.reject(error.toString());
-                }
-            }
+                res.put("ok", true);
+                res.put("msg", "All models have been deleted");
+                call.resolve(res);
+                call.setKeepAlive(false);
+            });
         }
-        // If we didn't receive any models at all, download the default en-US model
-        // this is the only download, so resolve the call when finished
-        else {
-            checkSingularModel("en-US", call, remoteModelManager, false);
+        else if (call.getData().has("model")) {
+            // we want to delete a singular model
+            String modelNameToDelete = call.getString("model");
 
-            //res.put("ok", true);
-            //res.put("msg", "No model provided - default en-US downloading...");
-            //call.resolve(res);
+            RemoteModel modelToDelete = (RemoteModel) modelNameToDelete;
+
+            remoteModelManager.getDownloadedModels(RemoteModel.class)
         }
     }
 
     @PluginMethod
     public void logStrokes(PluginCall call) throws JSONException {
+        JSObject res = new JSObject();
+
         float[] xArr = convertToFloatArray(call.getArray("x"));
         float[] yArr = convertToFloatArray(call.getArray("y"));
 
@@ -330,6 +346,10 @@ public class DigitalInkPlugin extends Plugin {
             }
             // build the stroke, and add the resulting stroke to the ink builder
             inkBuilder.addStroke(strokeBuilder.build());
+
+            res.put("ok", true);
+            res.put("msg", "(with time values) stroke added");
+            call.resolve(res);
         }
         // we didn't receive time values
         else {
@@ -345,11 +365,13 @@ public class DigitalInkPlugin extends Plugin {
             }
             // build the stroke, and add the resulting stroke to the ink builder
             inkBuilder.addStroke(strokeBuilder.build());
+
+            res.put("ok", true);
+            res.put("msg", "(without time values) stroke added");
+            call.resolve(res);
         }
     }
 
-    // erases canvas on client
-    // resets ink data
     @PluginMethod
     public void erase(PluginCall call) {
         // reset the ink builder
@@ -364,7 +386,6 @@ public class DigitalInkPlugin extends Plugin {
         call.resolve(res);
     }
 
-    // recognize the built-up ink data and send results to client
     @PluginMethod
     public void doRecognition(PluginCall call) {
         // build the ink to send to recognizer
@@ -408,7 +429,56 @@ public class DigitalInkPlugin extends Plugin {
         // we were not provided a specific model to use,
         // we should use the default
         else {
-            recognizer.recognize(ink);
+            recognize(ink, call);
         }
+    }
+
+    public void recognize(Ink ink, PluginCall call) {
+        JSArray candidateText = new JSArray();
+        JSArray candidateScore = new JSArray();
+        JSObject candidateInfo = new JSObject();
+        JSObject res = new JSObject();
+
+        /*
+         * Response structure:
+         *
+         * {
+         *   ok: boolean,
+         *   msg: string,
+         *   results: { candidates: string[], scores: number[] },
+         *   model: string | undefined (Optional),
+         *   context: string | undefined (Optional),
+         *   writingArea: { w: number, h: number } | undefined (Optional)
+         * }
+         *
+         * */
+
+        // recognize ink data
+        recognizer.recognize(ink)
+        .addOnSuccessListener(
+            result -> {
+                // iterate through candidates and format into JSArray for response
+                for (int i = 0; i < result.getCandidates().size(); i++) {
+                    candidateText.put(result.getCandidates().get(i).getText());
+                    candidateScore.put(result.getCandidates().get(i).getScore());
+                }
+
+                // add JSArrays into JSObject for response
+                candidateInfo.put("candidates", candidateText);
+                candidateInfo.put("scores", candidateScore);
+
+                res.put("ok", true);
+                res.put("msg", "Recognized successfully");
+                res.put("results", candidateInfo);
+
+                // send responses back to the client
+                call.resolve(res);
+            }
+        )
+        .addOnFailureListener(
+            error -> {
+                call.reject(error.toString());
+            }
+        );
     }
 }
