@@ -20,12 +20,12 @@ npx cap sync
     * verify non-error response notifying that model is already downloaded :white_check_mark:
     * verify non-error if model is not already downloaded :white_check_mark:
   * download an array of models
-    * verify non-error if models are already downloaded
-    * verify non-error if some models are downloaded, and some need to be downloaded
-    * verify non-error if no models are downloaded yet
-    * verify non-error if all models are already downloaded
-    * verify error if one or more models are incorrect models
-* logStrokes()
+    * verify non-error if models are already downloaded :white_check_mark:  = passed
+    * verify non-error if some models are downloaded, and some need to be downloaded :white_check_mark:  = passed
+    * verify non-error if no models are downloaded yet :white_check_mark:  = passed
+    * verify non-error if all models are already downloaded :white_check_mark:  = passed
+    * verify error if one or more models are incorrect models :x: = fix needed
+* logStrokes() :x: = fix needed
   * verify error if we send non-numerical coordinate data for x, y, or t
   * verify error if we send any kind of number for t
   * verify non-error if we send any kind of number for x or y
@@ -33,8 +33,8 @@ npx cap sync
   * verify success response sent to client
   * draw a bunch of things and see if it breaks?
 * erase()
-  * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination
-  * verify non-error response
+  * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination :white_check_mark:  = passed
+  * verify non-error response :white_check_mark:  = passed
 * deleteModel()
   * (will finish this code 9/7)
   * Delete singular model
