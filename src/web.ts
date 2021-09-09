@@ -1,5 +1,5 @@
 import { WebPlugin } from '@capacitor/core';
-import { CallbackID, DeleteModelOptions, Model, Models, MultipleModelCallback, RecognitionOptions, SingularModelCallback } from '.';
+import { CallbackID, DeleteModelCallback, DeleteModelOptions, Model, Models, MultipleModelCallback, RecognitionOptions, SingularModelCallback } from '.';
 
 import type { XYTOptions, DigitalInkPlugin } from './definitions';
 
@@ -49,11 +49,9 @@ export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
     return "WEB DEBUG CALLBACK ID MULTIPLE"
   }
 
-  async deleteModel(options: DeleteModelOptions): Promise<{options: DeleteModelOptions, ok: boolean, msg: string}> {
-    return {
-      ok: false,
-      msg: "DELETEMODEL() We are in web debug",
-      options: options
-    }
+  async deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback): Promise<CallbackID> {
+    console.log({"Options": options, "Callback": callback})
+
+    return "WEB DEBUG CALLBACK ID DELETE"
   }
 }

@@ -191,14 +191,15 @@ The last model will be have the 'done' property set to true and signals the last
 ### deleteModel(...)
 
 ```typescript
-deleteModel(options: DeleteModelOptions) => any
+deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback) => any
 ```
 
 Deletes a singular/collection of models downloaded to the device, or all models.
 
-| Param         | Type                                                              | Description                                                 |
-| ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |
-| **`options`** | <code><a href="#deletemodeloptions">DeleteModelOptions</a></code> | delete all models, a singular model, or an array of models. |
+| Param          | Type                                                              | Description                                                 |
+| -------------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |
+| **`options`**  | <code><a href="#deletemodeloptions">DeleteModelOptions</a></code> | delete all models, a singular model, or an array of models. |
+| **`callback`** | <code>(response: Response, error?: any) =&gt; void</code>         |                                                             |
 
 **Returns:** <code>any</code>
 

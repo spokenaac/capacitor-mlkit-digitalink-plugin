@@ -20,6 +20,7 @@ import com.google.mlkit.vision.digitalink.DigitalInkRecognizer;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions;
 import com.google.mlkit.vision.digitalink.Ink;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.lang.reflect.Array;
@@ -73,6 +74,25 @@ public class DigitalInkPlugin extends Plugin {
             }
         }
         return floatArr;
+    }
+
+    public RemoteModel createRemoteModel(String langTag, PluginCall call) {
+        try {
+            // instantiate identifier
+            DigitalInkRecognitionModelIdentifier newIdentifier =
+                    DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
+
+            // build the model from the valid language tag
+            DigitalInkRecognitionModel newModel =
+                    DigitalInkRecognitionModel.builder(newIdentifier).build();
+
+            return newModel;
+        }
+        catch (MlKitException error) {
+            call.reject(error.toString());
+
+            return null;
+        }
     }
 
     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
@@ -261,9 +281,6 @@ public class DigitalInkPlugin extends Plugin {
 
     @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
     public void deleteModel(PluginCall call) {
-        // Keep call alive so we can resolve() multiple times
-        call.setKeepAlive(true);
-
         // instantiate response object
         /*
          * Response structure:
@@ -279,40 +296,158 @@ public class DigitalInkPlugin extends Plugin {
         // Model manager that manages already downloaded models, downloading models, and deleting models
         RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
-        if (call.getData().has("all")) {
-            // we want to delete all models
-            remoteModelManager.getDownloadedModels(RemoteModel.class)
-            .addOnCompleteListener(result -> {
-                Set downloadedModels = result.getResult();
+        System.out.println(call.getData());
 
-                Iterator modelsIter = downloadedModels.iterator();
+        if (call.getData().has("model")) {
+            // we were sent a singular model
+            String langTag = call.getString("model");
 
-                RemoteModel modelToDelete = (RemoteModel) modelsIter.next();
+            // create the model from the language tag provided
+            RemoteModel toDelete = createRemoteModel(langTag, call);
 
-                while (modelsIter.hasNext()) {
-                    remoteModelManager.deleteDownloadedModel(modelToDelete)
-                    .addOnCompleteListener(deleteResult -> {
-                        if (deleteResult.isSuccessful()) {
-                            // deletion was successful
-                            res.put("ok", true);
-                            res.put("msg", modelToDelete.getModelName() + " has been deleted")
-                            call.resolve(res);
-                        }
+            // check if the model is downloaded. Also checks if language tag provided
+            // is a legit model, or is misspelled, etc.
+            remoteModelManager.isModelDownloaded(toDelete)
+            .addOnSuccessListener(result -> {
+                if (result) {
+                    // model is in fact downloaded, we should delete it
+                    remoteModelManager.deleteDownloadedModel(toDelete)
+                    .addOnCompleteListener(deleted -> {
+                        System.out.println(deleted.getResult());
+                        // send response
+                        res.put("ok", true);
+                        res.put("msg", toDelete.getModelName() + " model deleted successfully.");
+                        call.resolve(res);
                     });
                 }
-                res.put("ok", true);
-                res.put("msg", "All models have been deleted");
-                call.resolve(res);
+                else {
+                    // model is not downloaded, we can't delete
+                    call.reject("Cannot delete " + toDelete.getModelName() + " model, it is not downloaded.");
+                    // singular model deletion, means we only get one error
+                    call.setKeepAlive(false);
+                }
+            })
+            .addOnFailureListener(result -> {
+                // various failures caught. misspelled tag, for one
+                call.reject(result.getMessage());
+                // singular model deletion, means we only get one error
                 call.setKeepAlive(false);
             });
         }
-        else if (call.getData().has("model")) {
-            // we want to delete a singular model
-            String modelNameToDelete = call.getString("model");
+        else if (call.getData().has("models")) {
+            // Keep call alive so we can resolve() multiple times
+            call.setKeepAlive(true);
 
-            RemoteModel modelToDelete = (RemoteModel) modelNameToDelete;
+            JSArray langTags = call.getArray("models");
 
-            remoteModelManager.getDownloadedModels(RemoteModel.class)
+            // iterate through language tag arrays, deleting each model
+            for (int i = 0; i < langTags.length(); i++) {
+                String langTag = "";
+                Boolean isLast = (i == langTags.length() - 1);
+
+                try {langTag = (String) langTags.get(i);}
+                catch (JSONException error) {call.reject(error.toString());}
+
+                // create the model class
+                RemoteModel toDelete = createRemoteModel(langTag, call);
+
+                if (toDelete != null) {
+                    // check if the model is downloaded. Also checks if language tag provided
+                    // is a legit model, or is misspelled, etc.
+                    remoteModelManager.isModelDownloaded(toDelete)
+                            .addOnSuccessListener(result -> {
+                                if (result) {
+                                    // model is in fact downloaded, we should delete it
+                                    remoteModelManager.deleteDownloadedModel(toDelete)
+                                            .addOnCompleteListener(deleted -> {
+                                                System.out.println(deleted.getResult());
+                                                res.put("ok", true);
+                                                res.put("msg", toDelete.getModelName() + " model deleted successfully.");
+                                                call.resolve(res);
+
+                                                if (isLast) {call.setKeepAlive(false);}
+                                            });
+                                }
+                                else {
+                                    // model is not downloaded, we can't delete
+                                    call.reject("Cannot delete " + toDelete.getModelName() + " model, it is not downloaded");
+                                    if (isLast) {call.setKeepAlive(false);}
+                                }
+                            })
+                            .addOnFailureListener(result -> {
+                                // various failures caught. misspelled tag, for one
+                                call.reject(result.getMessage());
+                                if (isLast) {call.setKeepAlive(false);}
+                            });
+                }
+                else {
+                    call.reject(langTag + " is not a valid model.");
+
+                    if (isLast) { call.setKeepAlive(false); }
+                }
+            }
+        }
+        else if (call.getData().has("all")) {
+            // Keep call alive so we can resolve() multiple times
+            call.setKeepAlive(true);
+
+            remoteModelManager.getDownloadedModels(DigitalInkRecognitionModel.class)
+            .addOnSuccessListener(result -> {
+               // downloaded models return as a Set
+               Set allModels = result;
+
+                if (allModels.size() > 0) {
+                    // create iterator to feed models in to be deleted
+                    Iterator allModelsIter = allModels.iterator();
+
+                    while (allModelsIter.hasNext()) {
+                        // defined model to delete
+                        DigitalInkRecognitionModel toDelete = (DigitalInkRecognitionModel) allModelsIter.next();
+
+                        remoteModelManager.deleteDownloadedModel(toDelete)
+                        .addOnCompleteListener(delResult -> {
+                            // send the response
+                            res.put("ok", true);
+                            res.put("msg", toDelete.getModelIdentifier().getLanguageTag() + " model deleted successfully.");
+                            call.resolve(res);
+                        })
+                        .addOnFailureListener(error -> {
+                            // send error to client
+                            call.reject(error.getMessage());
+
+                            // kill the call
+                            call.setKeepAlive(false);
+                        });
+                    }
+
+                    res.put("ok", true);
+                    res.put("msg", "All models successfully deleted.");
+                    call.resolve(res);
+
+                    // kill the call
+                    call.setKeepAlive(false);
+                }
+                else {
+                    res.put("ok", true);
+                    res.put("msg", "No models to delete.");
+                    call.resolve(res);
+
+                    call.setKeepAlive(false);
+                }
+
+           })
+            .addOnFailureListener(error -> {
+               // send error
+               call.reject(error.toString());
+
+               // kill the call
+               call.setKeepAlive(false);
+           });
+        }
+        else {
+            res.put("ok", true);
+            res.put("msg", "No params given, no models deleted.");
+            call.resolve(res);
         }
     }
 

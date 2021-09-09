@@ -58,7 +58,7 @@ export interface DigitalInkPlugin {
    * 
    * @param options delete all models, a singular model, or an array of models.
    */
-  deleteModel(options: DeleteModelOptions): Promise<{ ok: boolean, options: DeleteModelOptions }>
+  deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback): Promise<CallbackID>
 }
  
  export interface XYTOptions {
@@ -99,5 +99,7 @@ export interface RecognitionOptions {
  export type SingularModelCallback = (response: Response, error?: any) => void;
 
  export type MultipleModelCallback = (response: Response, error?: any) => void;
+
+ export type DeleteModelCallback = (response: Response, error?: any) => void;
 
  export type CallbackID = string;
