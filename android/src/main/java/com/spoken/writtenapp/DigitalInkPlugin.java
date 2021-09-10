@@ -33,6 +33,9 @@ public class DigitalInkPlugin extends Plugin {
     // Ink builder holds stroke data from various logStrokes() calls
     Ink.Builder inkBuilder = Ink.builder();
 
+    // Model manager that manages already downloaded models, downloading models, and deleting models
+    RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
+
     // Model defines what language model the recognizer uses to recognize
     DigitalInkRecognitionModel model;
 
@@ -45,8 +48,13 @@ public class DigitalInkPlugin extends Plugin {
             DigitalInkRecognitionModelIdentifier defaultIdentifier =
                     DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US");
 
+            // instantiate default model as en-US
             model = DigitalInkRecognitionModel.builder(defaultIdentifier).build();
 
+            // download the default model
+            remoteModelManager.download(model, new DownloadConditions.Builder().build());
+
+            // set recognizer to use default en-US
             recognizer = DigitalInkRecognition.getClient(
                 DigitalInkRecognizerOptions.builder(model).build()
             );
@@ -76,7 +84,7 @@ public class DigitalInkPlugin extends Plugin {
         return floatArr;
     }
 
-    public RemoteModel createRemoteModel(String langTag, PluginCall call) {
+    public DigitalInkRecognitionModel createRemoteModel(String langTag, PluginCall call) {
         try {
             // instantiate identifier
             DigitalInkRecognitionModelIdentifier newIdentifier =
@@ -99,9 +107,6 @@ public class DigitalInkPlugin extends Plugin {
     public void downloadSingularModel(PluginCall call) {
         // Keep call alive so we can resolve() multiple times
         call.setKeepAlive(true);
-
-        // Model manager that manages already downloaded models, downloading models, and deleting models
-        RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
         // get singular model specified from client
         String langTag = call.getString("model");
@@ -174,9 +179,6 @@ public class DigitalInkPlugin extends Plugin {
     public void downloadMultipleModels(PluginCall call) {
         // Keep call alive so we can resolve() multiple times
         call.setKeepAlive(true);
-
-        // Model manager that manages already downloaded models, downloading models, and deleting models
-        RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
         // get singular model specified from client
         JSArray langTags = call.getArray("models");
@@ -293,17 +295,12 @@ public class DigitalInkPlugin extends Plugin {
          * */
         JSObject res = new JSObject();
 
-        // Model manager that manages already downloaded models, downloading models, and deleting models
-        RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
-
-        System.out.println(call.getData());
-
         if (call.getData().has("model")) {
             // we were sent a singular model
             String langTag = call.getString("model");
 
             // create the model from the language tag provided
-            RemoteModel toDelete = createRemoteModel(langTag, call);
+            DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
 
             // check if the model is downloaded. Also checks if language tag provided
             // is a legit model, or is misspelled, etc.
@@ -349,7 +346,7 @@ public class DigitalInkPlugin extends Plugin {
                 catch (JSONException error) {call.reject(error.toString());}
 
                 // create the model class
-                RemoteModel toDelete = createRemoteModel(langTag, call);
+                DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
 
                 if (toDelete != null) {
                     // check if the model is downloaded. Also checks if language tag provided
@@ -532,39 +529,62 @@ public class DigitalInkPlugin extends Plugin {
             // instantiate langTag as the client's model
             String langTag = call.getString("model");
 
-            // if the model sent from the client is equal to the
-            // already equipped model, don't change anything
-            if (model.getModelIdentifier().getLanguageTag() == langTag) {
-                recognize(ink, call);
+            // make language tag into the correct model type
+            // also catches if langTag is not a legit model/misspelled, etc.
+            DigitalInkRecognitionModel newModel = createRemoteModel(langTag, call);
+
+            if (langTag != null) {
+                remoteModelManager.isModelDownloaded(newModel)
+                .addOnSuccessListener(result -> {
+                    if (result) {
+                        // the model is downloaded
+                        // set the recognizer to use the client-specified model
+                        recognizer = DigitalInkRecognition.getClient(
+                                DigitalInkRecognizerOptions.builder(newModel).build()
+                        );
+
+                        // perform the recognition with client-specified model
+                        recognize(ink, call);
+                    }
+                    else {
+                        // the model isn't downloaded yet
+                        call.reject(langTag + " needs to be downloaded first.");
+                    }
+                })
+                .addOnFailureListener(result -> {
+                    call.reject(result.getMessage());
+                });
             }
-            // we were sent a model from the client that was not equal
-            // to the already equipped model
             else {
-                // try block checks for whether or not provided language tag is a legit tag
-                try {
-                    DigitalInkRecognitionModelIdentifier identifier =
-                            DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
-
-                    // set the new model
-                    model = DigitalInkRecognitionModel.builder(identifier).build();
-
-                    // set recognizer to use the new model
+                return;
+            }
+        }
+        // we were not provided a specific model to use, we should use the default
+        else {
+            remoteModelManager.isModelDownloaded(model)
+            .addOnSuccessListener(result -> {
+                if (result) {
+                    // the default model is downloaded
+                    // set the recognizer to use the default model
                     recognizer = DigitalInkRecognition.getClient(
                             DigitalInkRecognizerOptions.builder(model).build()
                     );
 
-                    // recognize the ink with the new model
+                    // perform the recognition with default model
                     recognize(ink, call);
                 }
-                catch (MlKitException error) {
-                    call.reject(error.toString());
+                else {
+                    // the default model isn't downloaded yet
+                    call.reject(
+                        "default model '" +
+                            model.getModelIdentifier().getLanguageTag() +
+                            "' is not downloaded."
+                    );
                 }
-            }
-        }
-        // we were not provided a specific model to use,
-        // we should use the default
-        else {
-            recognize(ink, call);
+            })
+            .addOnFailureListener(result -> {
+                call.reject(result.getMessage());
+            });
         }
     }
 
