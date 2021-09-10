@@ -1,5 +1,7 @@
 package com.spoken.writtenapp;
 
+import android.speech.RecognizerIntent;
+
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -18,6 +20,8 @@ import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModel;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModelIdentifier;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognizer;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions;
+import com.google.mlkit.vision.digitalink.RecognitionContext;
+import com.google.mlkit.vision.digitalink.WritingArea;
 import com.google.mlkit.vision.digitalink.Ink;
 
 import org.json.JSONArray;
@@ -145,8 +149,8 @@ public class DigitalInkPlugin extends Plugin {
                     // if the model is already downloaded
                     res.put("ok", true);
                     res.put("msg", langTag + " model is already downloaded.");
-                    call.setKeepAlive(false);
                     call.resolve(res);
+                    call.setKeepAlive(false);
                 }
                 else {
                     // if the model is not already downloaded, download the new model
@@ -524,6 +528,30 @@ public class DigitalInkPlugin extends Plugin {
         // the ink builder should have all strokes from .addStroke() in logStrokes()
         Ink ink = inkBuilder.build();
 
+        RecognitionContext.Builder recognizerContextBuilder = RecognitionContext.builder();
+        recognizerContextBuilder.setPreContext("");
+        recognizerContextBuilder.setWritingArea(new WritingArea(0, 0));
+
+        RecognitionContext recognizerContext = recognizerContextBuilder.build();
+
+        if (call.getData().has("context")) {
+            try {
+
+                JSArray context = call.getArray("context");
+                String text = (String) context.get(0);
+                Float[] dimensions = (Float[]) context.get(1);
+
+                recognizerContextBuilder.setPreContext(text);
+                recognizerContextBuilder.setWritingArea(new WritingArea(dimensions[0], dimensions[1]));
+                recognizerContext = recognizerContextBuilder.build();
+            }
+            catch (JSONException error) {
+                call.reject("Error with context: " + error.toString());
+            }
+        }
+
+        RecognitionContext finalRecognizerContext = recognizerContext;
+
         // if we were sent a model to use specifically
         if (call.getData().has("model")) {
             // instantiate langTag as the client's model
@@ -533,7 +561,12 @@ public class DigitalInkPlugin extends Plugin {
             // also catches if langTag is not a legit model/misspelled, etc.
             DigitalInkRecognitionModel newModel = createRemoteModel(langTag, call);
 
+
             if (langTag != null) {
+                System.out.println(recognizerContext);
+                System.out.println(finalRecognizerContext);
+
+
                 remoteModelManager.isModelDownloaded(newModel)
                 .addOnSuccessListener(result -> {
                     if (result) {
@@ -544,7 +577,7 @@ public class DigitalInkPlugin extends Plugin {
                         );
 
                         // perform the recognition with client-specified model
-                        recognize(ink, call);
+                        recognize(ink, finalRecognizerContext, call);
                     }
                     else {
                         // the model isn't downloaded yet
@@ -571,7 +604,7 @@ public class DigitalInkPlugin extends Plugin {
                     );
 
                     // perform the recognition with default model
-                    recognize(ink, call);
+                    recognize(ink, finalRecognizerContext, call);
                 }
                 else {
                     // the default model isn't downloaded yet
@@ -588,7 +621,7 @@ public class DigitalInkPlugin extends Plugin {
         }
     }
 
-    public void recognize(Ink ink, PluginCall call) {
+    public void recognize(Ink ink, RecognitionContext context, PluginCall call) {
         JSArray candidateText = new JSArray();
         JSArray candidateScore = new JSArray();
         JSObject candidateInfo = new JSObject();
@@ -609,7 +642,7 @@ public class DigitalInkPlugin extends Plugin {
          * */
 
         // recognize ink data
-        recognizer.recognize(ink)
+        recognizer.recognize(ink, context)
         .addOnSuccessListener(
             result -> {
                 // iterate through candidates and format into JSArray for response

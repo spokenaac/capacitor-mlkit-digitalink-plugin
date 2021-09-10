@@ -81,6 +81,7 @@ npx cap sync
 
 <docgen-index>
 
+* [`initializeNotifications()`](#initializenotifications)
 * [`erase()`](#erase)
 * [`logStrokes(...)`](#logstrokes)
 * [`doRecognition(...)`](#dorecognition)
@@ -93,6 +94,20 @@ npx cap sync
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### initializeNotifications()
+
+```typescript
+initializeNotifications() => any
+```
+
+Initializes notifications on iOS -- NOT supported in Android
+due to the use of other event listeners
+
+**Returns:** <code>any</code>
+
+--------------------
+
 
 ### erase()
 
@@ -195,6 +210,8 @@ deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback) => any
 ```
 
 Deletes a singular/collection of models downloaded to the device, or all models.
+
+Delete ALL not supported in iOS due to Swift ModelManager limitations.
 
 | Param          | Type                                                              | Description                                                 |
 | -------------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |

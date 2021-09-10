@@ -1,4 +1,11 @@
 export interface DigitalInkPlugin {
+
+  /**
+   * Initializes notifications on iOS -- NOT supported in Android
+   * due to the use of other event listeners
+   */
+  initializeNotifications(): Promise<{ ok: boolean, msg: string }>
+
   /**
    * Erases natively stored stroke/point/ink data
    */
@@ -55,6 +62,8 @@ export interface DigitalInkPlugin {
 
   /**
    * Deletes a singular/collection of models downloaded to the device, or all models.
+   * 
+   * Delete ALL not supported in iOS due to Swift ModelManager limitations.
    * 
    * @param options delete all models, a singular model, or an array of models.
    */

@@ -4,6 +4,13 @@ import { CallbackID, DeleteModelCallback, DeleteModelOptions, Model, Models, Mul
 import type { XYTOptions, DigitalInkPlugin } from './definitions';
 
 export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
+  async initializeNotifications(): Promise<{ ok: boolean, msg: string }> {
+    return {
+      ok: false,
+      msg: "INITIALIZENOTIFICATIONS() We are in web debug"
+    }
+  }
+  
   async erase(): Promise<{ ok: boolean, msg: string }> {
     return {
       ok: false,
