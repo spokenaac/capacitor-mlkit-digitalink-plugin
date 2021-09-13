@@ -4,7 +4,7 @@ export interface DigitalInkPlugin {
    * Initializes notifications on iOS -- NOT supported in Android
    * due to the use of other event listeners
    */
-  initializeNotifications(): Promise<{ ok: boolean, msg: string }>
+  initializePlugin(): Promise<{ ok: boolean, msg: string }>
 
   /**
    * Erases natively stored stroke/point/ink data

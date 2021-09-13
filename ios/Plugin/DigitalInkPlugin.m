@@ -7,7 +7,7 @@ CAP_PLUGIN(DigitalInkPlugin, "DigitalInk",
             CAP_PLUGIN_METHOD(erase, CAPPluginReturnPromise);
             CAP_PLUGIN_METHOD(logStrokes, CAPPluginReturnPromise);
             CAP_PLUGIN_METHOD(doRecognition, CAPPluginReturnPromise);
-            CAP_PLUGIN_METHOD(initializeNotifications, CAPPluginReturnPromise);
+            CAP_PLUGIN_METHOD(initializePlugin, CAPPluginReturnPromise);
             CAP_PLUGIN_METHOD(downloadSingularModel, CAPPluginReturnCallback);
             CAP_PLUGIN_METHOD(downloadMultipleModels, CAPPluginReturnCallback);
             CAP_PLUGIN_METHOD(deleteModel, CAPPluginReturnCallback);

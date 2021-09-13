@@ -72,6 +72,10 @@ public class DigitalInkPlugin extends Plugin {
         }
     }
 
+    public void initializePlugin(PluginCall call) {
+        call.unimplemented("Not implemented on Android.");
+    }
+
     public float[] convertToFloatArray(JSArray arr) throws JSONException {
         float[] floatArr = new float[arr.length()];
 

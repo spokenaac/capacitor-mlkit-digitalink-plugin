@@ -24,7 +24,7 @@ public class DigitalInkPlugin: CAPPlugin {
     // callback ID used to access a saved call later
     var callID: String = ""
 
-    @objc func initializeNotifications(_ call: CAPPluginCall) {
+    @objc func initializePlugin(_ call: CAPPluginCall) {
         // Android/Java has onComplete/onFailure listeners you call immediately after the Task
         // in Swift, we must init some notification listeners that are emitted by the ModelManager given certain conditions
         // NOTE: these are not device push notifications, etc., just events
@@ -61,7 +61,7 @@ public class DigitalInkPlugin: CAPPlugin {
                 savedCall.resolve(["ok": true, "msg": langTag + " model successfully downloaded."])
         })
         
-        call.resolve(["ok": true, "msg": "Notifications initialized."])
+        call.resolve(["ok": true, "msg": "Plugin initialized."])
     }
     
     @objc func setDownloadedModels() {
@@ -93,7 +93,7 @@ public class DigitalInkPlugin: CAPPlugin {
         if let langTag = call.getString("model") {
             // create new model from identifier if language tag is legit
             if let newIdentifier = DigitalInkRecognitionModelIdentifier(forLanguageTag: langTag) {
-                model = DigitalInkRecognitionModel.init(modelIdentifier: newIdentifier)
+                let newModel: DigitalInkRecognitionModel = DigitalInkRecognitionModel.init(modelIdentifier: newIdentifier)
                 
                 // notifies client that model is being checked/downloaded
                 call.resolve(["ok": true, "msg": "Processing singular model " + langTag + "..."])
@@ -104,7 +104,7 @@ public class DigitalInkPlugin: CAPPlugin {
                 }
                 else {
                     // model is not already downloaded, so download it
-                    remoteModelManager.download(model, conditions: conditions)
+                    remoteModelManager.download(newModel, conditions: conditions)
                 }
             }
             else {

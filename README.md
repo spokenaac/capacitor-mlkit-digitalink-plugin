@@ -81,7 +81,7 @@ npx cap sync
 
 <docgen-index>
 
-* [`initializeNotifications()`](#initializenotifications)
+* [`initializePlugin()`](#initializeplugin)
 * [`erase()`](#erase)
 * [`logStrokes(...)`](#logstrokes)
 * [`doRecognition(...)`](#dorecognition)
@@ -95,10 +95,10 @@ npx cap sync
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-### initializeNotifications()
+### initializePlugin()
 
 ```typescript
-initializeNotifications() => any
+initializePlugin() => any
 ```
 
 Initializes notifications on iOS -- NOT supported in Android
