@@ -11,4 +11,5 @@ CAP_PLUGIN(DigitalInkPlugin, "DigitalInk",
             CAP_PLUGIN_METHOD(downloadSingularModel, CAPPluginReturnCallback);
             CAP_PLUGIN_METHOD(downloadMultipleModels, CAPPluginReturnCallback);
             CAP_PLUGIN_METHOD(deleteModel, CAPPluginReturnCallback);
+            CAP_PLUGIN_METHOD(getDownloadedModels, CAPPluginReturnPromise);
 )

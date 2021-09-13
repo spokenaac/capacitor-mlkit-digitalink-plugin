@@ -111,349 +111,18 @@ public class DigitalInkPlugin extends Plugin {
         }
     }
 
-    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
-    public void downloadSingularModel(PluginCall call) {
-        // Keep call alive so we can resolve() multiple times
-        call.setKeepAlive(true);
-
-        // get singular model specified from client
-        String langTag = call.getString("model");
+    @PluginMethod
+    public void erase(PluginCall call) {
+        // reset the ink builder
+        inkBuilder = Ink.builder();
 
         // instantiate response object
-        /*
-         * Response structure:
-         *
-         * {
-         *   ok: boolean,
-         *   msg: string,
-         * }
-         *
-         * */
         JSObject res = new JSObject();
-
-        // checks for whether or not provided language tag is a legit tag
-        try {
-            // instantiate identifier
-            DigitalInkRecognitionModelIdentifier identifier =
-                    DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
-
-            // build the model from the valid language tag
-            DigitalInkRecognitionModel model =
-                    DigitalInkRecognitionModel.builder(identifier).build();
-
-            // notifies client that model is being checked/downloaded
-            res.put("ok", true);
-            res.put("msg", "Processing singular model " + langTag + "...");
-            call.resolve(res);
-
-            // check if model is already downloaded
-            remoteModelManager.isModelDownloaded(model)
-            .addOnCompleteListener(result -> {
-                if (result.getResult()) {
-                    // if the model is already downloaded
-                    res.put("ok", true);
-                    res.put("msg", langTag + " model is already downloaded.");
-                    call.resolve(res);
-                    call.setKeepAlive(false);
-                }
-                else {
-                    // if the model is not already downloaded, download the new model
-                    remoteModelManager
-                    .download(model, new DownloadConditions.Builder().build())
-                    .addOnCompleteListener(response -> {
-                        if (response.isSuccessful()) {
-                            // all is well, resolve the call
-                            res.put("ok", true);
-                            res.put("msg", langTag + " model was downloaded successfully.");
-                            call.setKeepAlive(false);
-                            call.resolve(res);
-                        }
-                    })
-                    .addOnFailureListener(error -> {
-                        // we failed, reject the call
-                        call.setKeepAlive(false);
-                        call.reject(error.toString());
-                    });
-                }
-            });
-        }
-        catch (MlKitException error) {
-            call.setKeepAlive(false);
-            call.reject(error.toString());
-        }
-    }
-
-    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
-    public void downloadMultipleModels(PluginCall call) {
-        // Keep call alive so we can resolve() multiple times
-        call.setKeepAlive(true);
-
-        // get singular model specified from client
-        JSArray langTags = call.getArray("models");
-
-        // instantiate response object
-        /*
-         * Response structure:
-         *
-         * {
-         *   ok: boolean,
-         *   msg: string,
-         * }
-         *
-         * */
-        JSObject res = new JSObject();
-
         res.put("ok", true);
-        res.put("done", false);
-        res.put("msg", "Processing array of models...");
+        res.put("msg", "Erased stored stroke and point data.");
+
+        // return response object to client
         call.resolve(res);
-
-        for (int i = 0; i < langTags.length(); i++) {
-            Boolean lastModel = (i == langTags.length() - 1);
-
-            try {
-                // get current langTag
-                String langTag = (String) langTags.get(i);
-
-                // instantiate identifier
-                DigitalInkRecognitionModelIdentifier identifier =
-                        DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
-
-                // build the model from the valid language tag
-                DigitalInkRecognitionModel model =
-                        DigitalInkRecognitionModel.builder(identifier).build();
-
-                // check if model is already downloaded
-                remoteModelManager.isModelDownloaded(model)
-                .addOnCompleteListener(result -> {
-                    if (result.getResult()) {
-                        // if the model is already downloaded
-                        res.put("ok", true);
-                        res.put("done", lastModel);
-                        res.put("msg", langTag + " model is already downloaded.");
-                        call.resolve(res);
-
-                        if (lastModel) {
-                            // it's the last model, this should be last call resolve
-                            call.setKeepAlive(false);
-                        }
-                    }
-                    else {
-                        // if the model is not already downloaded, download the new model
-                        remoteModelManager
-                        .download(model, new DownloadConditions.Builder().build())
-                        .addOnCompleteListener(response -> {
-                            if (response.isSuccessful()) {
-                                // all is well, resolve the call
-                                res.put("ok", true);
-                                res.put("done", lastModel);
-                                res.put("msg", langTag + " model was downloaded successfully.");
-
-                                call.resolve(res);
-
-                                if (lastModel) {
-                                    // it's the last model, this should be last call resolve
-                                    call.setKeepAlive(false);
-                                }
-                            }
-                        })
-                        .addOnFailureListener(error -> {
-                            // we failed, reject the call
-                            call.reject(error.toString());
-
-                            if (lastModel) {
-                                // it's the last model, this should be last call resolve
-                                call.setKeepAlive(false);
-                            }
-                        });
-                    }
-                });
-            }
-            catch (MlKitException error) {
-                call.reject(error.toString());
-
-                if (lastModel) {
-                    // it's the last model, this should be last call resolve
-                    call.setKeepAlive(false);
-                }
-
-            }
-            catch (JSONException error) {
-                call.reject(error.toString());
-
-                if (lastModel) {
-                    // it's the last model, this should be last call resolve
-                    call.setKeepAlive(false);
-                }
-            }
-        }
-    }
-
-    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
-    public void deleteModel(PluginCall call) {
-        // instantiate response object
-        /*
-         * Response structure:
-         *
-         * {
-         *   ok: boolean,
-         *   msg: string,
-         * }
-         *
-         * */
-        JSObject res = new JSObject();
-
-        if (call.getData().has("model")) {
-            // we were sent a singular model
-            String langTag = call.getString("model");
-
-            // create the model from the language tag provided
-            DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
-
-            // check if the model is downloaded. Also checks if language tag provided
-            // is a legit model, or is misspelled, etc.
-            remoteModelManager.isModelDownloaded(toDelete)
-            .addOnSuccessListener(result -> {
-                if (result) {
-                    // model is in fact downloaded, we should delete it
-                    remoteModelManager.deleteDownloadedModel(toDelete)
-                    .addOnCompleteListener(deleted -> {
-                        System.out.println(deleted.getResult());
-                        // send response
-                        res.put("ok", true);
-                        res.put("msg", toDelete.getModelName() + " model deleted successfully.");
-                        call.resolve(res);
-                    });
-                }
-                else {
-                    // model is not downloaded, we can't delete
-                    call.reject("Cannot delete " + toDelete.getModelName() + " model, it is not downloaded.");
-                    // singular model deletion, means we only get one error
-                    call.setKeepAlive(false);
-                }
-            })
-            .addOnFailureListener(result -> {
-                // various failures caught. misspelled tag, for one
-                call.reject(result.getMessage());
-                // singular model deletion, means we only get one error
-                call.setKeepAlive(false);
-            });
-        }
-        else if (call.getData().has("models")) {
-            // Keep call alive so we can resolve() multiple times
-            call.setKeepAlive(true);
-
-            JSArray langTags = call.getArray("models");
-
-            // iterate through language tag arrays, deleting each model
-            for (int i = 0; i < langTags.length(); i++) {
-                String langTag = "";
-                Boolean isLast = (i == langTags.length() - 1);
-
-                try {langTag = (String) langTags.get(i);}
-                catch (JSONException error) {call.reject(error.toString());}
-
-                // create the model class
-                DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
-
-                if (toDelete != null) {
-                    // check if the model is downloaded. Also checks if language tag provided
-                    // is a legit model, or is misspelled, etc.
-                    remoteModelManager.isModelDownloaded(toDelete)
-                            .addOnSuccessListener(result -> {
-                                if (result) {
-                                    // model is in fact downloaded, we should delete it
-                                    remoteModelManager.deleteDownloadedModel(toDelete)
-                                            .addOnCompleteListener(deleted -> {
-                                                System.out.println(deleted.getResult());
-                                                res.put("ok", true);
-                                                res.put("msg", toDelete.getModelName() + " model deleted successfully.");
-                                                call.resolve(res);
-
-                                                if (isLast) {call.setKeepAlive(false);}
-                                            });
-                                }
-                                else {
-                                    // model is not downloaded, we can't delete
-                                    call.reject("Cannot delete " + toDelete.getModelName() + " model, it is not downloaded");
-                                    if (isLast) {call.setKeepAlive(false);}
-                                }
-                            })
-                            .addOnFailureListener(result -> {
-                                // various failures caught. misspelled tag, for one
-                                call.reject(result.getMessage());
-                                if (isLast) {call.setKeepAlive(false);}
-                            });
-                }
-                else {
-                    call.reject(langTag + " is not a valid model.");
-
-                    if (isLast) { call.setKeepAlive(false); }
-                }
-            }
-        }
-        else if (call.getData().has("all")) {
-            // Keep call alive so we can resolve() multiple times
-            call.setKeepAlive(true);
-
-            remoteModelManager.getDownloadedModels(DigitalInkRecognitionModel.class)
-            .addOnSuccessListener(result -> {
-               // downloaded models return as a Set
-               Set allModels = result;
-
-                if (allModels.size() > 0) {
-                    // create iterator to feed models in to be deleted
-                    Iterator allModelsIter = allModels.iterator();
-
-                    while (allModelsIter.hasNext()) {
-                        // defined model to delete
-                        DigitalInkRecognitionModel toDelete = (DigitalInkRecognitionModel) allModelsIter.next();
-
-                        remoteModelManager.deleteDownloadedModel(toDelete)
-                        .addOnCompleteListener(delResult -> {
-                            // send the response
-                            res.put("ok", true);
-                            res.put("msg", toDelete.getModelIdentifier().getLanguageTag() + " model deleted successfully.");
-                            call.resolve(res);
-                        })
-                        .addOnFailureListener(error -> {
-                            // send error to client
-                            call.reject(error.getMessage());
-
-                            // kill the call
-                            call.setKeepAlive(false);
-                        });
-                    }
-
-                    res.put("ok", true);
-                    res.put("msg", "All models successfully deleted.");
-                    call.resolve(res);
-
-                    // kill the call
-                    call.setKeepAlive(false);
-                }
-                else {
-                    res.put("ok", true);
-                    res.put("msg", "No models to delete.");
-                    call.resolve(res);
-
-                    call.setKeepAlive(false);
-                }
-
-           })
-            .addOnFailureListener(error -> {
-               // send error
-               call.reject(error.toString());
-
-               // kill the call
-               call.setKeepAlive(false);
-           });
-        }
-        else {
-            res.put("ok", true);
-            res.put("msg", "No params given, no models deleted.");
-            call.resolve(res);
-        }
     }
 
     @PluginMethod
@@ -513,20 +182,6 @@ public class DigitalInkPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void erase(PluginCall call) {
-        // reset the ink builder
-        inkBuilder = Ink.builder();
-
-        // instantiate response object
-        JSObject res = new JSObject();
-        res.put("ok", true);
-        res.put("msg", "Erased stored stroke and point data.");
-
-        // return response object to client
-        call.resolve(res);
-    }
-
-    @PluginMethod
     public void doRecognition(PluginCall call) {
         // build the ink to send to recognizer
         // the ink builder should have all strokes from .addStroke() in logStrokes()
@@ -556,21 +211,22 @@ public class DigitalInkPlugin extends Plugin {
 
         RecognitionContext finalRecognizerContext = recognizerContext;
 
-        // if we were sent a model to use specifically
-        if (call.getData().has("model")) {
-            // instantiate langTag as the client's model
-            String langTag = call.getString("model");
+        String langTag = "";
+        Boolean sentModel = false;
 
+        if (call.getString("model").length() > 0) {
+            langTag = call.getString("model");
+            sentModel = true;
+        }
+
+        // if we were sent a model to use specifically
+        if (sentModel) {
             // make language tag into the correct model type
             // also catches if langTag is not a legit model/misspelled, etc.
             DigitalInkRecognitionModel newModel = createRemoteModel(langTag, call);
 
-
-            if (langTag != null) {
-                System.out.println(recognizerContext);
-                System.out.println(finalRecognizerContext);
-
-
+            if (newModel != null) {
+                String finalLangTag = langTag;
                 remoteModelManager.isModelDownloaded(newModel)
                 .addOnSuccessListener(result -> {
                     if (result) {
@@ -582,46 +238,38 @@ public class DigitalInkPlugin extends Plugin {
 
                         // perform the recognition with client-specified model
                         recognize(ink, finalRecognizerContext, call);
-                    }
-                    else {
+                    } else {
                         // the model isn't downloaded yet
-                        call.reject(langTag + " needs to be downloaded first.");
+                        call.reject(finalLangTag + " model is not downloaded.");
                     }
                 })
                 .addOnFailureListener(result -> {
                     call.reject(result.getMessage());
                 });
             }
-            else {
-                return;
-            }
-        }
-        // we were not provided a specific model to use, we should use the default
-        else {
+        } else {
+            // we were not provided a specific model to use, we should use the default
             remoteModelManager.isModelDownloaded(model)
-            .addOnSuccessListener(result -> {
-                if (result) {
-                    // the default model is downloaded
-                    // set the recognizer to use the default model
-                    recognizer = DigitalInkRecognition.getClient(
-                            DigitalInkRecognizerOptions.builder(model).build()
-                    );
+                    .addOnSuccessListener(result -> {
+                        if (result) {
+                            // the default model is downloaded
+                            // set the recognizer to use the default model
+                            recognizer = DigitalInkRecognition.getClient(
+                                    DigitalInkRecognizerOptions.builder(model).build()
+                            );
 
-                    // perform the recognition with default model
-                    recognize(ink, finalRecognizerContext, call);
-                }
-                else {
-                    // the default model isn't downloaded yet
-                    call.reject(
-                        "default model '" +
-                            model.getModelIdentifier().getLanguageTag() +
-                            "' is not downloaded."
-                    );
-                }
-            })
-            .addOnFailureListener(result -> {
-                call.reject(result.getMessage());
-            });
+                            // perform the recognition with default model
+                            recognize(ink, finalRecognizerContext, call);
+                        }
+                        else {
+                            // the default model isn't downloaded yet
+                            call.reject("default model '" + model.getModelIdentifier().getLanguageTag() + "' is not downloaded."
+                            );
+                        }
+                    })
+                    .addOnFailureListener(result -> {
+                        call.reject(result.getMessage());
+                    });
         }
     }
 
@@ -647,30 +295,429 @@ public class DigitalInkPlugin extends Plugin {
 
         // recognize ink data
         recognizer.recognize(ink, context)
-        .addOnSuccessListener(
-            result -> {
-                // iterate through candidates and format into JSArray for response
-                for (int i = 0; i < result.getCandidates().size(); i++) {
-                    candidateText.put(result.getCandidates().get(i).getText());
-                    candidateScore.put(result.getCandidates().get(i).getScore());
-                }
+                .addOnSuccessListener(
+                        result -> {
+                            // iterate through candidates and format into JSArray for response
+                            for (int i = 0; i < result.getCandidates().size(); i++) {
+                                candidateText.put(result.getCandidates().get(i).getText());
+                                candidateScore.put(result.getCandidates().get(i).getScore());
+                            }
 
-                // add JSArrays into JSObject for response
-                candidateInfo.put("candidates", candidateText);
-                candidateInfo.put("scores", candidateScore);
+                            // add JSArrays into JSObject for response
+                            candidateInfo.put("candidates", candidateText);
+                            candidateInfo.put("scores", candidateScore);
 
+                            res.put("ok", true);
+                            res.put("msg", "Recognized successfully");
+                            res.put("results", candidateInfo);
+
+                            // send responses back to the client
+                            call.resolve(res);
+                        }
+                )
+                .addOnFailureListener(
+                        error -> {
+                            call.reject(error.toString());
+                        }
+                );
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    public void downloadSingularModel(PluginCall call) {
+        // Keep call alive so we can resolve() multiple times
+        call.setKeepAlive(true);
+
+        // instantiate response object
+        /*
+         * Response structure:
+         *
+         * {
+         *   ok: boolean,
+         *   msg: string,
+         * }
+         *
+         * */
+        JSObject res = new JSObject();
+
+        if (call.getData().has("model")) {
+            String langTag = call.getString("model");
+
+            // checks for whether or not provided language tag is a legit tag
+            try {
+                // instantiate identifier
+                DigitalInkRecognitionModelIdentifier newIdentifier =
+                        DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
+
+                // build the model from the valid language tag
+                DigitalInkRecognitionModel newModel =
+                        DigitalInkRecognitionModel.builder(newIdentifier).build();
+
+                // notifies client that model is being checked/downloaded
                 res.put("ok", true);
-                res.put("msg", "Recognized successfully");
-                res.put("results", candidateInfo);
-
-                // send responses back to the client
+                res.put("done", false);
+                res.put("msg", "Processing singular model " + langTag + "...");
                 call.resolve(res);
+
+                // check if model is already downloaded
+                String finalLangTag = langTag;
+                remoteModelManager.isModelDownloaded(newModel)
+                        .addOnCompleteListener(result -> {
+                            if (result.getResult()) {
+                                // if the model is already downloaded
+                                res.put("ok", true);
+                                res.put("done", true);
+                                res.put("msg", finalLangTag + " model is already downloaded.");
+                                call.resolve(res);
+                                call.setKeepAlive(false);
+                            }
+                            else {
+                                // if the model is not already downloaded, download the new model
+                                remoteModelManager
+                                        .download(newModel, new DownloadConditions.Builder().build())
+                                        .addOnCompleteListener(response -> {
+                                            if (response.isSuccessful()) {
+                                                // all is well, resolve the call
+                                                res.put("ok", true);
+                                                res.put("done", true);
+                                                res.put("msg", finalLangTag + " model was downloaded successfully.");
+                                                call.setKeepAlive(false);
+                                                call.resolve(res);
+                                            }
+                                        })
+                                        .addOnFailureListener(error -> {
+                                            // we failed, reject the call
+                                            call.setKeepAlive(false);
+                                            call.reject(error.toString());
+                                        });
+                            }
+                        });
             }
-        )
-        .addOnFailureListener(
-            error -> {
+            catch (MlKitException error) {
+                call.setKeepAlive(false);
                 call.reject(error.toString());
             }
-        );
+        } else {
+            call.reject("No params sent, no model downloaded");
+            call.setKeepAlive(false);
+        }
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    public void downloadMultipleModels(PluginCall call) {
+        // Keep call alive so we can resolve() multiple times
+        call.setKeepAlive(true);
+
+        // instantiate response object
+        /*
+         * Response structure:
+         *
+         * {
+         *   ok: boolean,
+         *   msg: string,
+         * }
+         *
+         * */
+        JSObject res = new JSObject();
+
+        if (call.getData().has("models")) {
+            // get singular model specified from client
+            JSArray langTags = call.getArray("models");
+
+            res.put("ok", true);
+            res.put("done", false);
+            res.put("msg", "Processing array of models...");
+            call.resolve(res);
+
+            for (int i = 0; i < langTags.length(); i++) {
+                Boolean lastModel = (i == langTags.length() - 1);
+
+                try {
+                    // get current langTag
+                    String langTag = (String) langTags.get(i);
+
+                    // instantiate identifier
+                    DigitalInkRecognitionModelIdentifier newIdentifier =
+                            DigitalInkRecognitionModelIdentifier.fromLanguageTag(langTag);
+
+                    // build the model from the valid language tag
+                    DigitalInkRecognitionModel newModel =
+                            DigitalInkRecognitionModel.builder(newIdentifier).build();
+
+                    // check if model is already downloaded
+                    remoteModelManager.isModelDownloaded(newModel)
+                            .addOnCompleteListener(result -> {
+                                if (result.getResult()) {
+                                    // if the model is already downloaded
+                                    res.put("ok", true);
+                                    res.put("done", lastModel);
+                                    res.put("msg", langTag + " model is already downloaded.");
+                                    call.resolve(res);
+
+                                    if (lastModel) {
+                                        // it's the last model, this should be last call resolve
+                                        call.setKeepAlive(false);
+                                    }
+                                } else {
+                                    // if the model is not already downloaded, download the new model
+                                    remoteModelManager
+                                            .download(newModel, new DownloadConditions.Builder().build())
+                                            .addOnCompleteListener(response -> {
+                                                if (response.isSuccessful()) {
+                                                    // all is well, resolve the call
+                                                    res.put("ok", true);
+                                                    res.put("done", lastModel);
+                                                    res.put("msg", langTag + " model was downloaded successfully.");
+
+                                                    call.resolve(res);
+
+                                                    if (lastModel) {
+                                                        // it's the last model, this should be last call resolve
+                                                        call.setKeepAlive(false);
+                                                    }
+                                                }
+                                            })
+                                            .addOnFailureListener(error -> {
+                                                // we failed, reject the call
+                                                call.reject(error.toString());
+
+                                                if (lastModel) {
+                                                    // it's the last model, this should be last call resolve
+                                                    call.setKeepAlive(false);
+                                                }
+                                            });
+                                }
+                            });
+                } catch (MlKitException error) {
+                    call.reject(error.toString());
+
+                    if (lastModel) {
+                        // it's the last model, this should be last call resolve
+                        call.setKeepAlive(false);
+                    }
+                } catch (JSONException error) {
+                    call.reject(error.toString());
+
+                    if (lastModel) {
+                        // it's the last model, this should be last call resolve
+                        call.setKeepAlive(false);
+                    }
+                }
+            }
+        } else {
+            call.reject("No params sent, no models downloaded.");
+        }
+    }
+
+    @PluginMethod(returnType = PluginMethod.RETURN_CALLBACK)
+    public void deleteModel(PluginCall call) {
+        // instantiate response object
+        /*
+         * Response structure:
+         *
+         * {
+         *   ok: boolean,
+         *   msg: string,
+         * }
+         *
+         * */
+        JSObject res = new JSObject();
+
+        if (call.getData().has("model")) {
+
+            // we were sent a singular model
+            String langTag = call.getString("model");
+
+            // create the model from the language tag provided
+            DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
+
+            // check if the model is downloaded. Also checks if language tag provided
+            // is a legit model, or is misspelled, etc.
+            remoteModelManager.isModelDownloaded(toDelete)
+            .addOnSuccessListener(result -> {
+                if (result) {
+                    // model is in fact downloaded, we should delete it
+                    remoteModelManager.deleteDownloadedModel(toDelete)
+                    .addOnCompleteListener(deleted -> {
+                        // send response
+                        res.put("ok", true);
+                        res.put("done", true);
+                        res.put("msg", toDelete.getModelIdentifier().getLanguageTag() + " model deleted successfully.");
+                        call.resolve(res);
+                    });
+                }
+                else {
+                    System.out.println("error?????");
+                    System.out.println(toDelete.getModelIdentifier().getLanguageTag());
+                    // model is not downloaded, we can't delete
+                    call.reject("Cannot delete " + toDelete.getModelIdentifier().getLanguageTag() + " model, it is not downloaded.");
+                }
+            })
+            .addOnFailureListener(result -> {
+                // various failures caught. misspelled tag, for one
+                call.reject(result.getMessage());
+            });
+        }
+        else if (call.getData().has("models")) {
+            // Keep call alive so we can resolve() multiple times
+            call.setKeepAlive(true);
+
+            JSArray langTags = call.getArray("models");
+
+            // iterate through language tag arrays, deleting each model
+            for (int i = 0; i < langTags.length(); i++) {
+                String langTag = "";
+                Boolean isLast = (i == langTags.length() - 1);
+
+                try {langTag = (String) langTags.get(i);}
+                catch (JSONException error) {call.reject(error.toString());}
+
+                // create the model class
+                DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
+
+                if (toDelete != null) {
+                    // check if the model is downloaded. Also checks if language tag provided
+                    // is a legit model, or is misspelled, etc.
+                    remoteModelManager.isModelDownloaded(toDelete)
+                    .addOnSuccessListener(result -> {
+                        if (result) {
+                            // model is in fact downloaded, we should delete it
+                            remoteModelManager.deleteDownloadedModel(toDelete)
+                            .addOnCompleteListener(deleted -> {
+                                System.out.println(deleted.getResult());
+                                res.put("ok", true);
+                                res.put("done", isLast);
+                                res.put("msg", toDelete.getModelName() + " model deleted successfully.");
+                                call.resolve(res);
+
+                                call.setKeepAlive(!isLast);
+                            });
+                        }
+                        else {
+                            // model is not downloaded, we can't delete
+                            call.reject("Cannot delete " + toDelete.getModelName() + " model, it is not downloaded");
+                            call.setKeepAlive(!isLast);
+                        }
+                    })
+                    .addOnFailureListener(result -> {
+                        // various failures caught. misspelled tag, for one
+                        call.reject(result.getMessage());
+                        call.setKeepAlive(!isLast);
+                    });
+                }
+                else {
+                    call.reject(langTag + " is not a valid model.");
+
+                    call.setKeepAlive(!isLast);
+                }
+            }
+        }
+        else if (call.getData().has("all")) {
+            // Keep call alive so we can resolve() multiple times
+            call.setKeepAlive(true);
+
+            remoteModelManager.getDownloadedModels(DigitalInkRecognitionModel.class)
+            .addOnSuccessListener(result -> {
+               // downloaded models return as a Set
+               Set allModels = result;
+
+                if (allModels.size() > 0) {
+                    // create iterator to feed models in to be deleted
+                    Iterator allModelsIter = allModels.iterator();
+
+                    Integer counter = 0;
+
+                    while (allModelsIter.hasNext()) {
+                        counter++;
+                        Integer finalCounter = counter;
+
+                        // defined model to delete
+                        DigitalInkRecognitionModel toDelete = (DigitalInkRecognitionModel) allModelsIter.next();
+
+                        remoteModelManager.deleteDownloadedModel(toDelete)
+                        .addOnCompleteListener(delResult -> {
+                            // send the response
+                            res.put("ok", true);
+                            res.put("done", finalCounter == allModels.size());
+                            res.put("msg", toDelete.getModelIdentifier().getLanguageTag() + " model deleted successfully.");
+                            call.resolve(res);
+
+                            if (finalCounter == allModels.size()) {
+                                // last iteration, kill the call
+                                call.setKeepAlive(false);
+                            }
+                        })
+                        .addOnFailureListener(error -> {
+                            // send error to client
+                            call.reject(error.getMessage());
+
+                            if (finalCounter == allModels.size()) {
+                                call.setKeepAlive(false);
+                            }
+                        });
+                    }
+
+                    res.put("ok", true);
+                    res.put("done", false);
+                    res.put("msg", "Deleting models...");
+                    call.resolve(res);
+                }
+                else {
+                    call.reject("No models to delete.");
+
+                    // kill the call
+                    call.setKeepAlive(false);
+                }
+
+           })
+            .addOnFailureListener(error -> {
+               // send error
+               call.reject(error.toString());
+
+               // kill the call
+               call.setKeepAlive(false);
+           });
+        }
+        else {
+            call.reject("No params given, no models deleted.");
+        }
+    }
+
+    @PluginMethod
+    public void getDownloadedModels(PluginCall call) {
+        // instantiate response object
+        /*
+         * Response structure:
+         *
+         * {
+         *   ok: boolean,
+         *   msg: string,
+         *   models: string[]
+         * }
+         *
+         * */
+        JSObject res = new JSObject();
+
+        remoteModelManager.getDownloadedModels(DigitalInkRecognitionModel.class)
+        .addOnSuccessListener(result -> {
+            // downloaded models return as a Set
+            Set allModels = result;
+
+            if (allModels.size() > 0) {
+                res.put("ok", true);
+                res.put("msg", "All models successfully deleted.");
+                res.put("models", allModels);
+                call.resolve(res);
+            }
+            else {
+                res.put("ok", true);
+                res.put("msg", "No models are downloaded.");
+                call.resolve(res);
+            }
+
+        })
+        .addOnFailureListener(error -> {
+            // send error
+            call.reject(error.toString());
+        });
     }
 }

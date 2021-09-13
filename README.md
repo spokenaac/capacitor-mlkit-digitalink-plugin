@@ -88,6 +88,7 @@ npx cap sync
 * [`downloadSingularModel(...)`](#downloadsingularmodel)
 * [`downloadMultipleModels(...)`](#downloadmultiplemodels)
 * [`deleteModel(...)`](#deletemodel)
+* [`getDownloadedModels()`](#getdownloadedmodels)
 * [Interfaces](#interfaces)
 
 </docgen-index>
@@ -217,6 +218,17 @@ Delete ALL not supported in iOS due to Swift ModelManager limitations.
 | -------------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |
 | **`options`**  | <code><a href="#deletemodeloptions">DeleteModelOptions</a></code> | delete all models, a singular model, or an array of models. |
 | **`callback`** | <code>(response: Response, error?: any) =&gt; void</code>         |                                                             |
+
+**Returns:** <code>any</code>
+
+--------------------
+
+
+### getDownloadedModels()
+
+```typescript
+getDownloadedModels() => any
+```
 
 **Returns:** <code>any</code>
 

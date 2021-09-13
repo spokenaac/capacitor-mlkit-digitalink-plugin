@@ -26,14 +26,7 @@ export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
     }
   }
   
-  async doRecognition(options: RecognitionOptions)
-  :Promise<{
-    ok: boolean,
-    msg: string,
-    results: { candidates: string[], scores: number[] },
-    options: RecognitionOptions
-  }> {
-    return {
+  async doRecognition(options: RecognitionOptions) :Promise<{ ok: boolean, msg: string, results: { candidates: string[], scores: number[] }, options: RecognitionOptions }> { return {
       ok: false,
       msg: 'DORECOGNITION() We are in web debug',
       results: {
@@ -60,5 +53,13 @@ export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
     console.log({"Options": options, "Callback": callback})
 
     return "WEB DEBUG CALLBACK ID DELETE"
+  }
+
+  async getDownloadedModels(): Promise<{ok: true, msg: string, models: string[]}> {
+    return {
+      ok: true,
+      msg: "GETDOWNLOADEDMODELS() We are in web debug",
+      models: ["en-US", "debug"]
+    }
   }
 }
