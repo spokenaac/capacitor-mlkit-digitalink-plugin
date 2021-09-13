@@ -9,6 +9,17 @@ npm install capacitor-digitalink
 npx cap sync
 ```
 
+## Todos
+### Easier/quick
+* add functionality getDownloadedModels() so that the client can view which models are currently downloaded.
+* add functionality setModel() so client can set the model to use
+  * debatable -- already do this in doRecognition()
+
+### More involved (not hard)
+* add switchable modes to recognizing strokes
+  * Normal Mode: log strokes as normal, then fire the doRecognition method separately
+  * Quick Mode: fire doRecognition immediately after strokes are logged. This should function similar to autocomplete when typing text. Could be useful to allow the drawing of one or two words to then dynamically display suggestions.
+
 ## QA Check
 ### :white_check_mark:  = passed
 ### :x: = fix needed
@@ -16,15 +27,15 @@ npx cap sync
 ### Android
 * downloadModel()
   * download a model
-    * verify error thrown if incorrect model :white_check_mark:
-    * verify non-error response notifying that model is already downloaded :white_check_mark:
-    * verify non-error if model is not already downloaded :white_check_mark:
+    * verify error thrown if incorrect model
+    * verify non-error response notifying that model is already downloaded
+    * verify non-error if model is not already downloaded
   * download an array of models
-    * verify non-error if models are already downloaded :white_check_mark:  = passed
-    * verify non-error if some models are downloaded, and some need to be downloaded :white_check_mark:  = passed
-    * verify non-error if no models are downloaded yet :white_check_mark:  = passed
-    * verify non-error if all models are already downloaded :white_check_mark:  = passed
-    * verify error if one or more models are incorrect models :x: = fix needed
+    * verify non-error if models are already downloaded
+    * verify non-error if some models are downloaded, and some need to be downloaded
+    * verify non-error if no models are downloaded yet
+    * verify non-error if all models are already downloaded
+    * verify error if one or more models are incorrect models
 * logStrokes() :x: = fix needed
   * verify error if we send non-numerical coordinate data for x, y, or t
   * verify error if we send any kind of number for t
@@ -33,8 +44,8 @@ npx cap sync
   * verify success response sent to client
   * draw a bunch of things and see if it breaks?
 * erase()
-  * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination :white_check_mark:  = passed
-  * verify non-error response :white_check_mark:  = passed
+  * mess around with drawing/erasing/drawing/erasing, see if it can break with any certain combination
+  * verify non-error response
 * deleteModel()
   * (will finish this code 9/7)
   * Delete singular model
