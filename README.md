@@ -24,16 +24,8 @@ npm install capacitor-digitalink
 npx cap sync
 ```
 
-## Todos
-### Easier/quick
-* add functionality getDownloadedModels() so that the client can view which models are currently downloaded.
-* add functionality setModel() so client can set the model to use
-  * debatable -- already do this in doRecognition()
-
-### More involved (not hard)
-* add switchable modes to recognizing strokes
-  * Normal Mode: log strokes as normal, then fire the doRecognition method separately
-  * Quick Mode: fire doRecognition immediately after strokes are logged. This should function similar to autocomplete when typing text. Could be useful to allow the drawing of one or two words to then dynamically display suggestions.
+## Todos / Notes
+* Provide functionality for finding LocalModel (en-US) as a default model, and don't allow en-US as a param in deleting models?
 
 ## QA Check - check Asana
 
