@@ -530,38 +530,47 @@ public class DigitalInkPlugin extends Plugin {
             // create the model from the language tag provided
             DigitalInkRecognitionModel toDelete = createRemoteModel(langTag, call);
 
-            // check if the model is downloaded. Also checks if language tag provided
-            // is a legit model, or is misspelled, etc.
-            remoteModelManager.isModelDownloaded(toDelete)
-            .addOnSuccessListener(result -> {
-                if (result) {
-                    // model is in fact downloaded, we should delete it
-                    remoteModelManager.deleteDownloadedModel(toDelete)
-                    .addOnCompleteListener(deleted -> {
-                        // send response
-                        res.put("ok", true);
-                        res.put("done", true);
-                        res.put("msg", toDelete.getModelIdentifier().getLanguageTag() + " model deleted successfully.");
-                        call.resolve(res);
-                    });
-                }
-                else {
-                    System.out.println("error?????");
-                    System.out.println(toDelete.getModelIdentifier().getLanguageTag());
-                    // model is not downloaded, we can't delete
-                    call.reject("Cannot delete " + toDelete.getModelIdentifier().getLanguageTag() + " model, it is not downloaded.");
-                }
-            })
-            .addOnFailureListener(result -> {
-                // various failures caught. misspelled tag, for one
-                call.reject(result.getMessage());
-            });
+            if (toDelete == null) {
+                call.reject("Cannot delete invalid model identifier");
+            }
+            else {
+                // check if the model is downloaded. Also checks if language tag provided
+                // is a legit model, or is misspelled, etc.
+                remoteModelManager.isModelDownloaded(toDelete)
+                .addOnSuccessListener(result -> {
+                    if (result) {
+                        // model is in fact downloaded, we should delete it
+                        remoteModelManager.deleteDownloadedModel(toDelete)
+                                .addOnCompleteListener(deleted -> {
+                                    // send response
+                                    res.put("ok", true);
+                                    res.put("done", true);
+                                    res.put("msg", toDelete.getModelIdentifier().getLanguageTag() + " model deleted successfully.");
+                                    call.resolve(res);
+                                });
+                    }
+                    else {
+                        System.out.println("error?????");
+                        System.out.println(toDelete.getModelIdentifier().getLanguageTag());
+                        // model is not downloaded, we can't delete
+                        call.reject("Cannot delete " + toDelete.getModelIdentifier().getLanguageTag() + " model, it is not downloaded.");
+                    }
+                })
+                .addOnFailureListener(result -> {
+                    // various failures caught. misspelled tag, for one
+                    call.reject(result.getMessage());
+                });
+            }
         }
         else if (call.getData().has("models")) {
             // Keep call alive so we can resolve() multiple times
             call.setKeepAlive(true);
 
             JSArray langTags = call.getArray("models");
+
+            res.put("ok", true);
+            res.put("done", false);
+            res.put("msg", "Processing array of models...");
 
             // iterate through language tag arrays, deleting each model
             for (int i = 0; i < langTags.length(); i++) {
