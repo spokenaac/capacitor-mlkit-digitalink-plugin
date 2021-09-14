@@ -11,8 +11,8 @@ public class DigitalInkPlugin: CAPPlugin {
     
     // we instantiate our model default to 'en-US'
     var defaultIdentifier: DigitalInkRecognitionModelIdentifier = DigitalInkRecognitionModelIdentifier(forLanguageTag: "en-US")!
-    lazy var model: DigitalInkRecognitionModel = DigitalInkRecognitionModel(modelIdentifier: defaultIdentifier)
-    lazy var options: DigitalInkRecognizerOptions = DigitalInkRecognizerOptions(model: model)
+    lazy var defaultModel: DigitalInkRecognitionModel = DigitalInkRecognitionModel(modelIdentifier: defaultIdentifier)
+    lazy var options: DigitalInkRecognizerOptions = DigitalInkRecognizerOptions(model: defaultModel)
     lazy var recognizer: DigitalInkRecognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
     
     // instantiate the model manager
@@ -23,6 +23,9 @@ public class DigitalInkPlugin: CAPPlugin {
     
     // callback ID used to access a saved call later
     var callID: String = ""
+    
+    // counter to keep track of how many models are downloading so we can understand when the call is finished
+    var downloadCount: Int = 0
     
     @objc func setDownloadedModels() {
         // Set listOfDownloadedModels to accurately reflect all models downloaded
@@ -43,10 +46,16 @@ public class DigitalInkPlugin: CAPPlugin {
     }
 
     @objc func initializePlugin(_ call: CAPPluginCall) {
+        // check/download our default en-US model
+        if !remoteModelManager.isModelDownloaded(defaultModel) {
+            // it's not downloaded, so download it
+            remoteModelManager.download(defaultModel, conditions: conditions)
+        }
+        
         // Android/Java has onComplete/onFailure listeners you call immediately after the Task
         // in Swift, we must init some notification listeners that are emitted by the ModelManager given certain conditions
         // NOTE: these are not device push notifications, etc., just events
-
+        //
         // add observer for successful model download
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name.mlkitModelDownloadDidSucceed,
@@ -56,12 +65,14 @@ public class DigitalInkPlugin: CAPPlugin {
             [unowned self]
             (notification) in
                 // access saved call from earlier when downloads were called
-                let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID))!
-
-                let downloadedModel: DigitalInkRecognitionModel = notification.userInfo![ModelDownloadUserInfoKey.remoteModel.rawValue] as! DigitalInkRecognitionModel
-                let langTag: String = downloadedModel.modelIdentifier.languageTag
-                
-                savedCall.resolve(["ok": true, "msg": langTag + " model successfully downloaded."])
+                if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
+                    let downloadedModel: DigitalInkRecognitionModel = notification.userInfo![ModelDownloadUserInfoKey.remoteModel.rawValue] as! DigitalInkRecognitionModel
+                    let langTag: String = downloadedModel.modelIdentifier.languageTag
+                    
+                    downloadCount -= 1
+                    
+                    savedCall.resolve(["ok": true, "done": downloadCount == 0, "msg": langTag + " model successfully downloaded."])
+                }
           })
         
         // add observer for failure to download model
@@ -78,7 +89,9 @@ public class DigitalInkPlugin: CAPPlugin {
                 let downloadedModel: DigitalInkRecognitionModel = notification.userInfo![ModelDownloadUserInfoKey.remoteModel.rawValue] as! DigitalInkRecognitionModel
                 let langTag: String = downloadedModel.modelIdentifier.languageTag
                 
-                savedCall.resolve(["ok": true, "msg": langTag + " model successfully downloaded."])
+                downloadCount -= 1
+                
+                savedCall.resolve(["ok": true, "done": downloadCount == 0, "msg": langTag + " model failed to download."])
         })
         
         call.resolve(["ok": true, "msg": "Plugin initialized."])
@@ -170,11 +183,11 @@ public class DigitalInkPlugin: CAPPlugin {
             
             if let newIdentifier = DigitalInkRecognitionModelIdentifier.init(forLanguageTag: langTag) {
                 // the identifier tag specified is legit, redefine the model to use this tag
-                model = DigitalInkRecognitionModel.init(modelIdentifier: newIdentifier)
+                let newModel = DigitalInkRecognitionModel.init(modelIdentifier: newIdentifier)
                 
-                if remoteModelManager.isModelDownloaded(model) {
+                if remoteModelManager.isModelDownloaded(newModel) {
                     // the specified model is downloaded, redefine the recognizer to use this model
-                    options = DigitalInkRecognizerOptions.init(model: model)
+                    options = DigitalInkRecognizerOptions.init(model: newModel)
                     recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
 
                     recognizer.recognize(
@@ -212,11 +225,9 @@ public class DigitalInkPlugin: CAPPlugin {
             }
         } else {
             // we didn't receive a model, use the default -- ensure it's downloaded first
-            model = DigitalInkRecognitionModel.init(modelIdentifier: defaultIdentifier)
-            
-            if remoteModelManager.isModelDownloaded(model) {
+            if remoteModelManager.isModelDownloaded(defaultModel) {
                 // it is downloaded -- set recognizer and recognize
-                options = DigitalInkRecognizerOptions.init(model: model)
+                options = DigitalInkRecognizerOptions.init(model: defaultModel)
                 recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
                 
                 recognizer.recognize(
@@ -271,24 +282,30 @@ public class DigitalInkPlugin: CAPPlugin {
                 let newModel: DigitalInkRecognitionModel = DigitalInkRecognitionModel.init(modelIdentifier: newIdentifier)
                 
                 // notifies client that model is being checked/downloaded
-                call.resolve(["ok": true, "msg": "Processing singular model " + langTag + "..."])
+                call.resolve(["ok": true, "done": false, "msg": "Processing singular model " + langTag + "..."])
                 
-                if remoteModelManager.isModelDownloaded(model) {
+                if remoteModelManager.isModelDownloaded(newModel) {
                     // if it is already downloaded, return final call notifying client
-                    call.resolve(["ok": true, "msg": langTag + " model is already downloaded."])
+                    call.resolve(["ok": true, "done": true, "msg": langTag + " model is already downloaded."])
+                    call.keepAlive = false
                 } else {
                     // model is not already downloaded, so download it
                     remoteModelManager.download(newModel, conditions: conditions)
                     
-                    call.resolve(["ok": true, "msg": newModel.modelIdentifier.languageTag + " model is downloading."])
+                    // +1 download count
+                    downloadCount += 1
+                    
+                    call.resolve(["ok": true, "done": false, "msg": newModel.modelIdentifier.languageTag + " model is downloading."])
                 }
             } else {
                 // incorrect model tag was given
                 call.reject(call.getString("model")! + " model is not a valid model identifier", nil)
+                call.keepAlive = false
             }
         } else {
             // no model was provided
             call.reject("No params given, no models downloaded.", nil)
+            call.keepAlive = false
         }
     }
     
@@ -305,10 +322,9 @@ public class DigitalInkPlugin: CAPPlugin {
         // save callbackID for future use in the notification center
         callID = call.callbackId
         
-        // get singular model specified from client
         if let langTags = call.getArray("models") {
             // notifies client that model is being checked/downloaded
-            call.resolve(["ok": true, "msg": "Processing models..."])
+            call.resolve(["ok": true, "done": false, "msg": "Processing models..."])
             
             for langTagJSValue in langTags {
                 let langTag: String = langTagJSValue as! String
@@ -317,28 +333,28 @@ public class DigitalInkPlugin: CAPPlugin {
                 if let newIdentifier = DigitalInkRecognitionModelIdentifier(forLanguageTag: langTag) {
                     let newModel: DigitalInkRecognitionModel = DigitalInkRecognitionModel.init(modelIdentifier: newIdentifier)
                     
-                    if remoteModelManager.isModelDownloaded(model) {
+                    if remoteModelManager.isModelDownloaded(newModel) {
                         // model is already downloaded
-                        call.resolve(["ok": true, "msg": langTag + " model is already downloaded."])
-                    }
-                    else {
+                        call.resolve(["ok": true, "done": false, "msg": langTag + " model is already downloaded."])
+                    } else {
                         // model is not already downloaded, so download it
                         // model download confirmation is handled in notification center
                         remoteModelManager.download(newModel, conditions: conditions)
                         
-                        call.resolve(["ok": true, "msg": model.modelIdentifier.languageTag + " model is downloading."])
+                        downloadCount += 1
+                        
+                        call.resolve(["ok": true, "done": false, "msg": newModel.modelIdentifier.languageTag + " model is downloading."])
                     }
-                }
-                else {
+                } else {
                     // incorrect model tag was given
                     call.reject(langTag + " model is not a valid model identifier", nil)
                 }
             }
-            call.resolve(["ok": true, "msg": "Models processed."])
-        }
-        else {
+            call.resolve(["ok": true, "done": downloadCount == 0, "msg": "Models processed."])
+        } else {
             // no models were provided
             call.reject("No params given, no models downloaded.", nil)
+            call.keepAlive = false
         }
     }
     
@@ -351,6 +367,8 @@ public class DigitalInkPlugin: CAPPlugin {
         
         // we need to return multiple messages to client
         call.keepAlive = true
+        
+        call.resolve(["ok": true, "done": false, "msg": "Deleting models..."])
         
         // set the array of all currently downloaded models
         setDownloadedModels()
@@ -366,7 +384,7 @@ public class DigitalInkPlugin: CAPPlugin {
                     remoteModelManager.deleteDownloadedModel(checkingModel, completion: {
                         (error: Error?) in
                         if error == nil {
-                            call.resolve(["ok": true, "msg": langTag + " model successfully deleted."])
+                            call.resolve(["ok": true, "done": true, "msg": langTag + " model successfully deleted."])
                             call.keepAlive = false // kill the call
                         } else {
                             call.reject("Could not delete " + langTag + " model: " + error.debugDescription, nil)
@@ -381,12 +399,17 @@ public class DigitalInkPlugin: CAPPlugin {
                 call.reject(langTag + " is not a valid model identifier.", nil)
                 call.keepAlive = false // kill the call
             }
-        }
-        // we were sent an array of models to delete
-        else if let langTags = call.getArray("models") {
+        } else if let langTags = call.getArray("models") {
+            var deleteCounter = langTags.count
+            
+            // we were sent an array of models to delete
             for langTagJSValue in langTags {
                 let langTag: String = langTagJSValue as! String
                 
+                deleteCounter -= 1
+                
+                call.keepAlive = !(deleteCounter == 0)
+
                 if let checkingID: DigitalInkRecognitionModelIdentifier = DigitalInkRecognitionModelIdentifier(forLanguageTag: langTag) {
                     // given identifier is legit
                     let checkingModel: DigitalInkRecognitionModel = DigitalInkRecognitionModel.init(modelIdentifier: checkingID)
@@ -396,9 +419,8 @@ public class DigitalInkPlugin: CAPPlugin {
                         remoteModelManager.deleteDownloadedModel(checkingModel, completion: {
                             (error: Error?) in
                             if error == nil {
-                                call.resolve(["ok": true, "msg": langTag + " model successfully deleted."])
-                            }
-                            else {
+                                call.resolve(["ok": true, "done": deleteCounter == 0, "msg": langTag + " model successfully deleted."])
+                            } else {
                                 call.reject("Could not delete " + langTag + " model: " + error.debugDescription, nil)
                             }
                         })
@@ -409,37 +431,36 @@ public class DigitalInkPlugin: CAPPlugin {
                     call.reject(langTag + " is not a valid model identifier.", nil)
                 }
             }
-            
-            call.resolve(["ok": true, "msg": "All models provided have been processed."])
-            call.keepAlive = false
+            // send response
+            call.resolve(["ok": true, "done": false, "msg": "All models provided have been processed."])
         }
         else if call.getBool("all") ?? false {
-            print(listOfDownloadedModels, listOfDownloadedModels.count)
+            call.resolve(["ok": true, "done": false, "msg": "Checking locally downloaded models..."])
+            
             if listOfDownloadedModels.count > 0 {
+                var deleteCount = listOfDownloadedModels.count
+                
                 // if we have any models downloaded
-                for model in listOfDownloadedModels {
+                for modelIter in listOfDownloadedModels {
                     // delete every model in the list
-                    remoteModelManager.deleteDownloadedModel(model) {
+                    remoteModelManager.deleteDownloadedModel(modelIter) {
                         (error: Error?) in
                         if error == nil {
-                            call.resolve(["ok": true, "msg": model.modelIdentifier.languageTag + " model successfully deleted"])
-                        }
-                        else {
-                            call.reject("Could not delete " + model.modelIdentifier.languageTag + " model: " + error.debugDescription, nil)
+                            deleteCount -= 1
+                            call.resolve(["ok": true, "done": deleteCount == 0, "msg": modelIter.modelIdentifier.languageTag + " model successfully deleted"])
+                            call.keepAlive = !(deleteCount == 0)
+                        } else {
+                            call.reject("Could not delete " + modelIter.modelIdentifier.languageTag + " model: " + error.debugDescription, nil)
                         }
                     }
                 }
-                
-                call.resolve(["ok": true, "msg": "All models deleted."])
-                usleep(100000) // wait for 100ms to kill the call, ensure everything is deleted
+            } else {
+                call.reject("No models are currently downloaded.", nil)
                 call.keepAlive = false
             }
-            else {
-                call.reject("No models are currently downloaded.", nil)
-            }
-        }
-        else {
+        } else {
             call.reject("No params were given, no models deleted.", nil)
+            call.keepAlive = false
         }
     }
     
