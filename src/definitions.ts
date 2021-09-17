@@ -63,8 +63,6 @@ export interface DigitalInkPlugin {
   /**
    * Deletes a singular/collection of models downloaded to the device, or all models.
    * 
-   * Delete ALL not supported in iOS due to Swift ModelManager limitations.
-   * 
    * @param options delete all models, a singular model, or an array of models.
    */
   deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback): Promise<CallbackID>

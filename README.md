@@ -164,8 +164,6 @@ deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback) => any
 
 Deletes a singular/collection of models downloaded to the device, or all models.
 
-Delete ALL not supported in iOS due to Swift ModelManager limitations.
-
 | Param          | Type                                                              | Description                                                 |
 | -------------- | ----------------------------------------------------------------- | ----------------------------------------------------------- |
 | **`options`**  | <code><a href="#deletemodeloptions">DeleteModelOptions</a></code> | delete all models, a singular model, or an array of models. |
