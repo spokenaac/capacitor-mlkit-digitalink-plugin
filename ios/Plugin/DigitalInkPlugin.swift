@@ -100,7 +100,7 @@ public class DigitalInkPlugin: CAPPlugin {
     @objc func erase(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
-            savedCall.keepAlive = false;
+            savedCall.keepAlive = false
             savedCall.resolve(["ok": true, "msg": "Cleaned up previously saved call"])
         }
         
@@ -116,7 +116,7 @@ public class DigitalInkPlugin: CAPPlugin {
         
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
-            savedCall.keepAlive = false;
+            savedCall.keepAlive = false
             savedCall.resolve(["ok": true, "msg": "Cleaned up previously saved call"])
         }
         
@@ -156,7 +156,7 @@ public class DigitalInkPlugin: CAPPlugin {
     @objc func doRecognition(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
-            savedCall.keepAlive = false;
+            savedCall.keepAlive = false
             savedCall.resolve(["ok": true, "msg": "Cleaned up previously saved call"])
         }
         
@@ -179,7 +179,7 @@ public class DigitalInkPlugin: CAPPlugin {
         var sentModel: Bool = false
         
         if let check = call.getString("model") {
-            sentModel = check.count > 0
+            sentModel = check.isEmpty
         }
 
         if sentModel {
@@ -269,7 +269,7 @@ public class DigitalInkPlugin: CAPPlugin {
     @objc func downloadSingularModel(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
-            savedCall.keepAlive = false;
+            savedCall.keepAlive = false
             savedCall.resolve(["ok": true, "msg": "Cleaned up previously saved call"])
         }
         
@@ -316,7 +316,7 @@ public class DigitalInkPlugin: CAPPlugin {
     @objc func downloadMultipleModels(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
-            savedCall.keepAlive = false;
+            savedCall.keepAlive = false
             savedCall.resolve(["ok": true, "msg": "Cleaned up previously saved call"])
         }
         
@@ -365,7 +365,7 @@ public class DigitalInkPlugin: CAPPlugin {
     @objc func deleteModel(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
-            savedCall.keepAlive = false;
+            savedCall.keepAlive = false
             savedCall.resolve(["ok": true, "msg": "Cleaned up previously saved call"])
         }
         
@@ -441,7 +441,7 @@ public class DigitalInkPlugin: CAPPlugin {
         else if call.getBool("all") ?? false {
             call.resolve(["ok": true, "done": false, "msg": "Checking locally downloaded models..."])
             
-            if listOfDownloadedModels.count > 0 {
+            if listOfDownloadedModels.isEmpty {
                 var deleteCount = listOfDownloadedModels.count
                 
                 // if we have any models downloaded
@@ -474,7 +474,7 @@ public class DigitalInkPlugin: CAPPlugin {
         
         var modelsArr: [String] = []
         
-        if listOfDownloadedModels.count > 0 {
+        if listOfDownloadedModels.isEmpty {
             for model: DigitalInkRecognitionModel in listOfDownloadedModels {
                 modelsArr.append(model.modelIdentifier.languageTag)
             }
