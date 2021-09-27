@@ -91,7 +91,6 @@ logStrokes(options: XYTOptions) => any
 
 Sends XY coordinate data to native code to be prepared for model inference
 Can include/exclude time values
-
 Ensure all units for coordinates/time are consistent between logs. Unit types don't matter,
 they just need to be the same -- all values are normalized
 
@@ -129,7 +128,6 @@ downloadSingularModel(model: Model, callback: SingularModelCallback) => any
 ```
 
 Downloads singular model.
-
 Last callback has the 'done' property set to true, and signals the last callback.
 
 | Param          | Type                                                      | Description                                                                             |
@@ -151,7 +149,6 @@ downloadMultipleModels(models: Models, callback: MultipleModelCallback) => any
 Downloads multiple models from a given array.
 Callback function will return a response or an error dependent on whether a given model has
 already been downloaded, is a valid/invalid model, or is finished being downloaded.
-
 The last model will be have the 'done' property set to true and signals the last callback.
 
 | Param          | Type                                                      | Description                                                     |

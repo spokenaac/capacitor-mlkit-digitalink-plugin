@@ -126,7 +126,7 @@ public class DigitalInkPlugin: CAPPlugin {
         print(xArr, yArr)
 
         if let tArr: [NSNumber] = call.options["t"] as? [NSNumber] {
-            for index in xArr.indices() {
+            for index in xArr.indices {
                 let x = Float(truncating: xArr[index])
                 let y = Float(truncating: yArr[index])
                 let t = Int(truncating: tArr[index])
@@ -139,7 +139,7 @@ public class DigitalInkPlugin: CAPPlugin {
             
             call.resolve(["ok": true, "msg": "(with time values) stroke added"])
         } else {
-            for index in xArr.indices() {
+            for index in xArr.indices {
                 let x = Float(truncating: xArr[index])
                 let y = Float(truncating: yArr[index])
                 
@@ -152,6 +152,41 @@ public class DigitalInkPlugin: CAPPlugin {
             call.resolve(["ok": true, "msg": "(without time values) stroke added"])
         }
     }
+    @objc func recognize(call: CAPPluginCall, newModel: DigitalInkRecognitionModel, ink: Ink, recognizerContext: DigitalInkRecognitionContext) {
+        var candidateText: [String] = []
+        var candidateScore: [NSNumber] = []
+        
+        // the specified model is downloaded, redefine the recognizer to use this model
+        options = DigitalInkRecognizerOptions.init(model: newModel)
+        recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
+
+        recognizer.recognize(
+            ink: ink,
+            context: recognizerContext,
+            completion: {
+                (result: DigitalInkRecognitionResult?, error: Error?) in
+                if let result = result {
+                    for candidate in result.candidates {
+                        candidateText.append(candidate.text)
+                        candidateScore.append(candidate.score ?? 0)
+                    }
+                    
+                    call.resolve([
+                        "ok": true,
+                        //"context": preContext,
+                        //"writingArea": writingArea,
+                        "msg": "Recognized successfully",
+                        "results": [
+                            "candidates": candidateText,
+                            "scores": candidateScore
+                        ]
+                    ])
+                } else {
+                    call.reject(error.debugDescription, nil)
+                }
+            }
+        )
+    }
     
     @objc func doRecognition(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
@@ -162,8 +197,7 @@ public class DigitalInkPlugin: CAPPlugin {
         
         // initialize ink class, response variables
         let ink = Ink.init(strokes: strokes)
-        var candidateText: [String] = []
-        var candidateScore: [NSNumber] = []
+        
         
         let context: JSArray? = call.getArray("context")
         var recognizerContext: DigitalInkRecognitionContext = DigitalInkRecognitionContext.init(preContext: "", writingArea: WritingArea.init(width: 0, height: 0))
@@ -179,7 +213,7 @@ public class DigitalInkPlugin: CAPPlugin {
         var sentModel: Bool = false
         
         if let check = call.getString("model") {
-            sentModel = check.isEmpty
+            sentModel = !check.isEmpty
         }
 
         if sentModel {
@@ -191,76 +225,23 @@ public class DigitalInkPlugin: CAPPlugin {
                 
                 if remoteModelManager.isModelDownloaded(newModel) {
                     // the specified model is downloaded, redefine the recognizer to use this model
-                    options = DigitalInkRecognizerOptions.init(model: newModel)
-                    recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
-
-                    recognizer.recognize(
-                        ink: ink,
-                        context: recognizerContext,
-                        completion: {
-                            (result: DigitalInkRecognitionResult?, error: Error?) in
-                            if let result = result {
-                                for candidate in result.candidates {
-                                    candidateText.append(candidate.text)
-                                    candidateScore.append(candidate.score ?? 0)
-                                }
-                                
-                                call.resolve([
-                                    "ok": true,
-                                    //"context": preContext,
-                                    //"writingArea": writingArea,
-                                    "msg": "Recognized successfully",
-                                    "results": [
-                                        "candidates": candidateText,
-                                        "scores": candidateScore
-                                    ]
-                                ])
-                            } else {
-                                call.reject(error.debugDescription, nil)
-                            }
-                        }
-                    )
+                    recognize(call: call, newModel: newModel, ink: ink, recognizerContext: recognizerContext)
                 } else {
                     // the specified model is not downloaded
                     call.reject(langTag + " model is not downloaded.", nil)
                 }
             } else {
+                // we were sent an incorrect model
                 call.reject(call.getString("model")! + " model is not a usable model.", nil)
             }
         } else {
             // we didn't receive a model, use the default -- ensure it's downloaded first
             if remoteModelManager.isModelDownloaded(defaultModel) {
                 // it is downloaded -- set recognizer and recognize
-                options = DigitalInkRecognizerOptions.init(model: defaultModel)
-                recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
-                
-                recognizer.recognize(
-                    ink: ink,
-                    context: recognizerContext,
-                    completion: {
-                        (result: DigitalInkRecognitionResult?, error: Error?) in
-                        if let result = result {
-                            for candidate in result.candidates {
-                                candidateText.append(candidate.text)
-                                candidateScore.append(candidate.score ?? 0)
-                            }
-                            
-                            call.resolve([
-                                "ok": true,
-                                //"context": preContext,
-                                //"writingArea": writingArea,
-                                "msg": "Recognized successfully",
-                                "results": [
-                                    "candidates": candidateText,
-                                    "scores": candidateScore
-                                ]
-                            ])
-                        } else {
-                            call.reject(error.debugDescription, nil)
-                        }
-                    }
-                )
+                // options = DigitalInkRecognizerOptions.init(model: defaultModel)
+                recognize(call: call, newModel: defaultModel, ink: ink, recognizerContext: recognizerContext)
             } else {
+                // the default model isn't downloaded
                 call.reject("default " + defaultIdentifier.languageTag + " model is not downloaded.", nil)
             }
         }
@@ -441,7 +422,7 @@ public class DigitalInkPlugin: CAPPlugin {
         else if call.getBool("all") ?? false {
             call.resolve(["ok": true, "done": false, "msg": "Checking locally downloaded models..."])
             
-            if listOfDownloadedModels.isEmpty {
+            if !listOfDownloadedModels.isEmpty {
                 var deleteCount = listOfDownloadedModels.count
                 
                 // if we have any models downloaded
@@ -474,7 +455,7 @@ public class DigitalInkPlugin: CAPPlugin {
         
         var modelsArr: [String] = []
         
-        if listOfDownloadedModels.isEmpty {
+        if !listOfDownloadedModels.isEmpty {
             for model: DigitalInkRecognitionModel in listOfDownloadedModels {
                 modelsArr.append(model.modelIdentifier.languageTag)
             }
