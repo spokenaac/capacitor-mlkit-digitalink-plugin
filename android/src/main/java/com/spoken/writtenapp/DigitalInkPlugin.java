@@ -129,6 +129,8 @@ public class DigitalInkPlugin extends Plugin {
     public void logStrokes(PluginCall call) throws JSONException {
         JSObject res = new JSObject();
 
+        System.out.println(call.getArray("y"));
+
         float[] xArr = convertToFloatArray(call.getArray("x"));
         float[] yArr = convertToFloatArray(call.getArray("y"));
 

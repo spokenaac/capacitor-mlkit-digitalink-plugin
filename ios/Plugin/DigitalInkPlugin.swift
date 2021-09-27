@@ -74,7 +74,7 @@ public class DigitalInkPlugin: CAPPlugin {
                     savedCall.resolve(["ok": true, "done": downloadCount == 0, "msg": langTag + " model successfully downloaded."])
                 }
           })
-        
+
         // add observer for failure to download model
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name.mlkitModelDownloadDidFail,
@@ -112,6 +112,8 @@ public class DigitalInkPlugin: CAPPlugin {
     }
     
     @objc func logStrokes(_ call: CAPPluginCall) {
+        print("hey")
+        
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
             savedCall.keepAlive = false;
@@ -120,6 +122,8 @@ public class DigitalInkPlugin: CAPPlugin {
         
         let xArr: [NSNumber] = call.options["x"] as! [NSNumber]
         let yArr: [NSNumber] = call.options["y"] as! [NSNumber]
+        
+        print(xArr, yArr)
 
         if let tArr: [NSNumber] = call.options["t"] as? [NSNumber] {
             for (index, _) in xArr.enumerated() {

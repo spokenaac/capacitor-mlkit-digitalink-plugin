@@ -1,5 +1,4 @@
 export interface DigitalInkPlugin {
-
   /**
    * Initializes notifications on iOS -- NOT supported in Android
    * due to the use of other event listeners
@@ -14,10 +13,8 @@ export interface DigitalInkPlugin {
   /**
   * Sends XY coordinate data to native code to be prepared for model inference
   * Can include/exclude time values
-  * 
   * Ensure all units for coordinates/time are consistent between logs. Unit types don't matter,
   * they just need to be the same -- all values are normalized
-  * 
   * @param options - [ X coordinate, Y coordinate, T time in milliseconds ]
   */
   logStrokes(options: XYTOptions): Promise<{ ok: boolean, msg: string, options: XYTOptions }>
@@ -25,7 +22,6 @@ export interface DigitalInkPlugin {
   /**
   * Runs inference either on the provided model via the model param, or on the default English model.
   * All params are optional.
-  * 
   * @param model singular model to use for inference
   * @param context precontext to provide. Some letters/words may be mistaken for others, use this to disambiguate expected responses.
   * @param writingArea width and height of the drawing area. Only provide for further context--i.e. if writing two lines of text.
@@ -40,9 +36,7 @@ export interface DigitalInkPlugin {
 
   /**
   * Downloads singular model.
-  * 
   * Last callback has the 'done' property set to true, and signals the last callback.
-  * 
   * @param model model to download. Native code checks if model is valid and if it's already downloaded.
   * @param callback callback function that runs each time data is sent from the native code.
   */
@@ -52,9 +46,7 @@ export interface DigitalInkPlugin {
    * Downloads multiple models from a given array.
    * Callback function will return a response or an error dependent on whether a given model has
    * already been downloaded, is a valid/invalid model, or is finished being downloaded.
-   * 
    * The last model will be have the 'done' property set to true and signals the last callback.
-   * 
    * @param models array of models to download.
    * @param callback callback that runs each time data is sent from the native code.
    */
@@ -62,7 +54,6 @@ export interface DigitalInkPlugin {
 
   /**
    * Deletes a singular/collection of models downloaded to the device, or all models.
-   * 
    * @param options delete all models, a singular model, or an array of models.
    */
   deleteModel(options: DeleteModelOptions, callback: DeleteModelCallback): Promise<CallbackID>
