@@ -1,5 +1,7 @@
 # capacitor-digitalink
 
+[![CodeFactor](https://www.codefactor.io/repository/github/spokenaac/capacitor-mlkit-digitalink-plugin/badge?s=8ebb77632dbd29c45e6fec6029f7b54edaf47b37)](https://www.codefactor.io/repository/github/spokenaac/capacitor-mlkit-digitalink-plugin)
+
 Allows use of Google's MLKit DigitalInk models
 
 You must provide a set of coordinates with or without time values to properly use this plugin. There are various implementations out there, but the most common way to accomplish this is by using a Canvas, moving the Canvas Context to draw with pixels, then sending the data over to the plugin.
