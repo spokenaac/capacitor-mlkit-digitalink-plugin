@@ -63,7 +63,6 @@ public class DigitalInkPlugin extends Plugin {
                 DigitalInkRecognizerOptions.builder(model).build()
             );
         }
-        // TODO better catch here
         catch (MlKitException error) {
             System.out.println(" ");
             System.out.println("Initialization error...");
