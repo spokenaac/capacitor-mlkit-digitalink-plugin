@@ -57,7 +57,7 @@ public class DigitalInkPlugin: CAPPlugin {
         // NOTE: these are not device push notifications, etc., just events
         //
         // add observer for successful model download
-        NotificationCenter.default.addObserver(
+       let successDownloadNotif = NotificationCenter.default.addObserver(
             forName: NSNotification.Name.mlkitModelDownloadDidSucceed,
             object: nil,
             queue: OperationQueue.main,
@@ -76,7 +76,7 @@ public class DigitalInkPlugin: CAPPlugin {
           })
 
         // add observer for failure to download model
-        NotificationCenter.default.addObserver(
+        let failedDownloadNotif = NotificationCenter.default.addObserver(
             forName: NSNotification.Name.mlkitModelDownloadDidFail,
             object: nil,
             queue: OperationQueue.main,
@@ -126,7 +126,7 @@ public class DigitalInkPlugin: CAPPlugin {
         print(xArr, yArr)
 
         if let tArr: [NSNumber] = call.options["t"] as? [NSNumber] {
-            for (index, _) in xArr.enumerated() {
+            for index in xArr.indices() {
                 let x = Float(truncating: xArr[index])
                 let y = Float(truncating: yArr[index])
                 let t = Int(truncating: tArr[index])
@@ -139,7 +139,7 @@ public class DigitalInkPlugin: CAPPlugin {
             
             call.resolve(["ok": true, "msg": "(with time values) stroke added"])
         } else {
-            for (index, _) in xArr.enumerated() {
+            for index in xArr.indices() {
                 let x = Float(truncating: xArr[index])
                 let y = Float(truncating: yArr[index])
                 
