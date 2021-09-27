@@ -40,7 +40,7 @@ export interface DigitalInkPlugin {
   * @param model model to download. Native code checks if model is valid and if it's already downloaded.
   * @param callback callback function that runs each time data is sent from the native code.
   */
-  downloadSingularModel(model: Model, callback: SingularModelCallback): Promise<CallbackID>; 
+  downloadSingularModel(model: Model, callback: SingularModelCallback): Promise<CallbackID>;
   
   /**
    * Downloads multiple models from a given array.
