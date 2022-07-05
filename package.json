@@ -1,7 +1,7 @@
 {
   "name": "capacitor-digitalink",
   "version": "0.0.1",
-  "description": "Allows use of Google's MLKit DigitalInk models",
+  "description": "Allows use of Google's MLKit DigitalInk models in Ionic/Capacitor projects.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
   "types": "dist/esm/index.d.ts",
