@@ -56,4 +56,5 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
 
     implementation "com.google.mlkit:digital-ink-recognition:18.0.0"
+    implementation 'org.json:json:20220320'
 }

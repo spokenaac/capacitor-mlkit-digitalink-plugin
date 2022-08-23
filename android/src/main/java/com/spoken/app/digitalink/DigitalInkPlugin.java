@@ -1,6 +1,4 @@
-package com.spoken.app.digitalink;;
-
-import android.speech.RecognizerIntent;
+package com.spoken.app.digitalink;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -9,11 +7,9 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-import com.google.android.gms.tasks.Task;
 import com.google.mlkit.common.MlKitException;
 import com.google.mlkit.common.model.DownloadConditions;
 import com.google.mlkit.common.model.RemoteModelManager;
-import com.google.mlkit.common.model.RemoteModel;
 
 import com.google.mlkit.vision.digitalink.DigitalInkRecognition;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognitionModel;
@@ -24,11 +20,8 @@ import com.google.mlkit.vision.digitalink.RecognitionContext;
 import com.google.mlkit.vision.digitalink.WritingArea;
 import com.google.mlkit.vision.digitalink.Ink;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 
-import java.lang.reflect.Array;
-import java.util.Dictionary;
 import java.util.Iterator;
 import java.util.Set;
 
