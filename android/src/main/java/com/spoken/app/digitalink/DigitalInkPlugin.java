@@ -1,4 +1,4 @@
-package com.spoken.writtenapp;
+package com.spoken.app.digitalink;;
 
 import android.speech.RecognizerIntent;
 
