@@ -57,7 +57,7 @@ public class DigitalInkPlugin: CAPPlugin {
         // NOTE: these are not device push notifications, etc., just events
         //
         // add observer for successful model download
-       let successDownloadNotif = NotificationCenter.default.addObserver(
+       _ = NotificationCenter.default.addObserver(
             forName: NSNotification.Name.mlkitModelDownloadDidSucceed,
             object: nil,
             queue: OperationQueue.main,
@@ -76,7 +76,7 @@ public class DigitalInkPlugin: CAPPlugin {
           })
 
         // add observer for failure to download model
-        let failedDownloadNotif = NotificationCenter.default.addObserver(
+        _ = NotificationCenter.default.addObserver(
             forName: NSNotification.Name.mlkitModelDownloadDidFail,
             object: nil,
             queue: OperationQueue.main,
@@ -112,8 +112,6 @@ public class DigitalInkPlugin: CAPPlugin {
     }
     
     @objc func logStrokes(_ call: CAPPluginCall) {
-        print("hey")
-        
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
             savedCall.keepAlive = false
@@ -122,8 +120,6 @@ public class DigitalInkPlugin: CAPPlugin {
         
         let xArr: [NSNumber] = call.options["x"] as! [NSNumber]
         let yArr: [NSNumber] = call.options["y"] as! [NSNumber]
-        
-        print(xArr, yArr)
 
         if let tArr: [NSNumber] = call.options["t"] as? [NSNumber] {
             for index in xArr.indices {
@@ -132,33 +128,51 @@ public class DigitalInkPlugin: CAPPlugin {
                 let t = Int(truncating: tArr[index])
                 
                 let point: StrokePoint = StrokePoint.init(x: x, y: y, t: t)
+
                 points.append(point)
             }
-            strokes.append(Stroke.init(points: self.points))
-            points = []
+
+            let newStroke: Stroke = Stroke.init(points: self.points)
             
+            strokes.append(newStroke)
+
+            points = []
+
             call.resolve(["ok": true, "msg": "(with time values) stroke added"])
         } else {
             for index in xArr.indices {
                 let x = Float(truncating: xArr[index])
                 let y = Float(truncating: yArr[index])
-                
+
                 let point: StrokePoint = StrokePoint.init(x: x, y: y)
+
                 points.append(point)
             }
-            strokes.append(Stroke.init(points: self.points))
+
+            let newStroke: Stroke = Stroke.init(points: self.points)
+
+            strokes.append(newStroke)
+
             points = []
-            
+
             call.resolve(["ok": true, "msg": "(without time values) stroke added"])
         }
     }
     @objc func recognize(call: CAPPluginCall, newModel: DigitalInkRecognitionModel, ink: Ink, recognizerContext: DigitalInkRecognitionContext) {
         var candidateText: [String] = []
         var candidateScore: [NSNumber] = []
-        
+
         // the specified model is downloaded, redefine the recognizer to use this model
         options = DigitalInkRecognizerOptions.init(model: newModel)
         recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
+        
+        for stroke in ink.strokes {
+            print("\nStroke: ", stroke)
+            
+            for p in stroke.points {
+                print("\nPoint: ", p.x, p.y, p.t)
+            }
+        }
 
         recognizer.recognize(
             ink: ink,
@@ -166,11 +180,12 @@ public class DigitalInkPlugin: CAPPlugin {
             completion: {
                 (result: DigitalInkRecognitionResult?, error: Error?) in
                 if let result = result {
+
                     for candidate in result.candidates {
                         candidateText.append(candidate.text)
                         candidateScore.append(candidate.score ?? 0)
                     }
-                    
+
                     call.resolve([
                         "ok": true,
                         //"context": preContext,
@@ -187,7 +202,7 @@ public class DigitalInkPlugin: CAPPlugin {
             }
         )
     }
-    
+
     @objc func doRecognition(_ call: CAPPluginCall) {
         // if we have a saved call, clear it out to avoid overlaps
         if let savedCall: CAPPluginCall = (bridge?.savedCall(withID: callID)) {
@@ -198,17 +213,14 @@ public class DigitalInkPlugin: CAPPlugin {
         // initialize ink class, response variables
         let ink = Ink.init(strokes: strokes)
         
+        _ = call.getArray("context")
         
-        let context: JSArray? = call.getArray("context")
-        var recognizerContext: DigitalInkRecognitionContext = DigitalInkRecognitionContext.init(preContext: "", writingArea: WritingArea.init(width: 0, height: 0))
+        let writingArea: JSObject? = call.getObject("writingArea")
         
-        if context != nil {
-            let contextText: String = context![0] as! String
-            let contextArr: [NSNumber] = context![1] as! [NSNumber]
-            let contextDimensions: WritingArea = WritingArea.init(width: Float(truncating: contextArr[0]), height: Float(truncating: contextArr[1]))
-            
-            recognizerContext = DigitalInkRecognitionContext.init(preContext: contextText, writingArea: contextDimensions)
-        }
+        let writingWidth = (writingArea?["w"] ?? 0) as! Float
+        let writingHeight = (writingArea?["h"] ?? 0) as! Float
+        
+        let recognizerContext: DigitalInkRecognitionContext = DigitalInkRecognitionContext.init(preContext: "", writingArea: WritingArea.init(width: writingWidth, height: writingHeight))
         
         var sentModel: Bool = false
         
