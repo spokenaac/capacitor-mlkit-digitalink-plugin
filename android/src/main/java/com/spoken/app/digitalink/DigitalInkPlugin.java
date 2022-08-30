@@ -182,28 +182,19 @@ public class DigitalInkPlugin extends Plugin {
         Ink ink = inkBuilder.build();
 
         RecognitionContext.Builder recognizerContextBuilder = RecognitionContext.builder();
+
+        // Set pre-context
+        // TODO: add string context from call
         recognizerContextBuilder.setPreContext("");
-        recognizerContextBuilder.setWritingArea(new WritingArea(0, 0));
+
+        // Set writing area
+        JSObject writingArea = call.getObject("writingArea");
+        Integer wSize = writingArea.getInteger("width");
+        Integer hSize = writingArea.getInteger("height");
+
+        recognizerContextBuilder.setWritingArea(new WritingArea(wSize, hSize));
 
         RecognitionContext recognizerContext = recognizerContextBuilder.build();
-
-        if (call.getData().has("context")) {
-            try {
-
-                JSArray context = call.getArray("context");
-                String text = (String) context.get(0);
-                Float[] dimensions = (Float[]) context.get(1);
-
-                recognizerContextBuilder.setPreContext(text);
-                recognizerContextBuilder.setWritingArea(new WritingArea(dimensions[0], dimensions[1]));
-                recognizerContext = recognizerContextBuilder.build();
-            }
-            catch (JSONException error) {
-                call.reject("Error with context: " + error.toString());
-            }
-        }
-
-        RecognitionContext finalRecognizerContext = recognizerContext;
 
         String langTag = "";
         Boolean sentModel = false;
@@ -231,7 +222,7 @@ public class DigitalInkPlugin extends Plugin {
                         );
 
                         // perform the recognition with client-specified model
-                        recognize(ink, finalRecognizerContext, call);
+                        recognize(ink, recognizerContext, call);
                     } else {
                         // the model isn't downloaded yet
                         call.reject(finalLangTag + " model is not downloaded.");
@@ -253,7 +244,7 @@ public class DigitalInkPlugin extends Plugin {
                             );
 
                             // perform the recognition with default model
-                            recognize(ink, finalRecognizerContext, call);
+                            recognize(ink, recognizerContext, call);
                         }
                         else {
                             // the default model isn't downloaded yet

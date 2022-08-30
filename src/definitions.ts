@@ -76,7 +76,7 @@ export interface DeleteModelOptions {
 export interface RecognitionOptions {
   model?: string,
   context?: string,
-  writingArea?: {
+  writingArea: {
     w: number,
     h: number
   }
