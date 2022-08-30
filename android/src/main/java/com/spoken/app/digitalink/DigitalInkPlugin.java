@@ -189,8 +189,8 @@ public class DigitalInkPlugin extends Plugin {
 
         // Set writing area
         JSObject writingArea = call.getObject("writingArea");
-        Integer wSize = writingArea.getInteger("width");
-        Integer hSize = writingArea.getInteger("height");
+        Integer wSize = writingArea.getInteger("w");
+        Integer hSize = writingArea.getInteger("h");
 
         recognizerContextBuilder.setWritingArea(new WritingArea(wSize, hSize));
 
