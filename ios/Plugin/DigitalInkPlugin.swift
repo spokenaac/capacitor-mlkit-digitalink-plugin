@@ -165,14 +165,6 @@ public class DigitalInkPlugin: CAPPlugin {
         // the specified model is downloaded, redefine the recognizer to use this model
         options = DigitalInkRecognizerOptions.init(model: newModel)
         recognizer = DigitalInkRecognizer.digitalInkRecognizer(options: options)
-        
-        for stroke in ink.strokes {
-            print("\nStroke: ", stroke)
-            
-            for p in stroke.points {
-                print("\nPoint: ", p.x, p.y, p.t)
-            }
-        }
 
         recognizer.recognize(
             ink: ink,
