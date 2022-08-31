@@ -1,6 +1,6 @@
 {
   "name": "capacitor-mlkit-digitalink-plugin",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "Capacitor plugin for use of the Google MLKit Digital Ink Recognition models.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",
