@@ -91,24 +91,23 @@ export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
       let candidates: string[] = [];
       let scores: number[] = [];
 
-      await fetch(this.url, requestParams)
-      .then(response => response.json())
-      .then((data) => {
-        if (data[0] !== "FAILED_TO_PARSE_REQUEST_BODY") {
-          candidates = data[1][0][1];
-        }
-        else {
-          return {
-            ok: false,
-            msg: '***INK WEB: Something went wrong performing recognition (via web API) at url: ' + this.url,
-            options: options,
-            results: {
-              candidates: candidates,
-              scores: scores
-            }
+      const response = await fetch(this.url, requestParams);
+      const data = await response.json();
+
+      if (data[0] !== "FAILED_TO_PARSE_REQUEST_BODY") {
+        candidates = data[1][0][1];
+      }
+      else {
+        return {
+          ok: false,
+          msg: '***INK WEB: Something went wrong performing recognition (via web API) at url: ' + this.url,
+          options: options,
+          results: {
+            candidates: candidates,
+            scores: scores
           }
         }
-      });
+      }
 
       return {
         ok: true,
