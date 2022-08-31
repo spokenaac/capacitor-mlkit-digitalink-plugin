@@ -94,6 +94,7 @@ export class DigitalInkWeb extends WebPlugin implements DigitalInkPlugin {
       fetch(this.url, requestParams)
       .then(response => response.json())
       .then((data) => {
+        console.log('data!', data);
         if (data[0] !== "FAILED_TO_PARSE_REQUEST_BODY") {
           candidates = data[1][0][1];
         }
