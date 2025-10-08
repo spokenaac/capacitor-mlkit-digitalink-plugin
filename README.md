@@ -9,6 +9,13 @@ npm install capacitor-mlkit-digitalink-plugin
 npx cap sync
 ```
 
+## Requirements
+
+- Android now bundles `com.google.mlkit:digital-ink-recognition:19.0.0`, which adds Android 15 (16 KB page size) support.
+- iOS requires Xcode 16+, an iOS deployment target of 15.5 or newer, and Cocoapods `GoogleMLKit/DigitalInkRecognition` 9.0.0.
+
+After upgrading, run `pod repo update && pod install` inside your iOS project so CocoaPods pulls the new Google ML Kit binaries.
+
 ## API
 
 <docgen-index>
