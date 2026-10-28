@@ -1,0 +1,17 @@
+{
+  "MLKitCommon": {
+    "version": "14.0.0",
+    "url": "https://dl.google.com/dl/cpdc/00f258dabdb58dfa/MLKitCommon-14.0.0.tar.gz",
+    "sha256": "5c35abbd10a9412c4d1765e67999dd16bc99592ebaa4f993aea48a1c543c7fe2"
+  },
+  "MLKitMDD": {
+    "version": "10.0.0",
+    "url": "https://dl.google.com/dl/cpdc/b14ff2c7cc91cb0f/MLKitMDD-10.0.0.tar.gz",
+    "sha256": "c9e5135d15037096bab677c335d52e35239f44da51eaca3afb400c0bf544d3ef"
+  },
+  "MLKitDigitalInkRecognition": {
+    "version": "8.0.0",
+    "url": "https://dl.google.com/dl/cpdc/95473d50497208d4/MLKitDigitalInkRecognition-8.0.0.tar.gz",
+    "sha256": "c3583332816949e7edddc9321a33d96f1cc84677c783105fb05df915cf753909"
+  }
+}

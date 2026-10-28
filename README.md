@@ -12,9 +12,59 @@ npx cap sync
 ## Requirements
 
 - Android now bundles `com.google.mlkit:digital-ink-recognition:19.0.0`, which adds Android 15 (16 KB page size) support.
-- iOS requires Xcode 16+, an iOS deployment target of 15.5 or newer, and Cocoapods `GoogleMLKit/DigitalInkRecognition` 9.0.0.
+- iOS requires Xcode 16+, an iOS deployment target of 15.5 or newer, and CocoaPods.
 
-After upgrading, run `pod repo update && pod install` inside your iOS project so CocoaPods pulls the new Google ML Kit binaries.
+### iOS simulator support (0.5.0+)
+
+The npm package includes static XCFrameworks for physical iOS devices (`arm64`)
+and simulators (`arm64` and `x86_64`). The JavaScript API and the upstream ML Kit
+versions are unchanged: GoogleMLKit 9.0.0 / MLKitDigitalInkRecognition 8.0.0,
+MLKitCommon 14.0.0, and MLKitMDD 10.0.0.
+
+Google does not provide an official arm64 simulator build of these frameworks.
+The simulator variant is generated from Google's arm64 device code by changing
+its Mach-O platform metadata, using the compatibility approach described by
+[google-mlkit-swiftpm](https://github.com/d-date/google-mlkit-swiftpm/issues/112).
+This is an unofficial compatibility build and should be tested with the model
+and simulator you use. Device code is preserved. Google notices, Digital Ink
+resources, and privacy manifests are included.
+
+After upgrading:
+
+1. Remove `arm64` from **Excluded Architectures → Any iOS Simulator SDK** in your
+   app's Debug and Release configurations.
+2. Remove any Podfile hook that excludes `arm64` from simulator Pod builds.
+3. Run `npx cap sync ios`, clean the Xcode build folder, and select an iOS
+   simulator compatible with your app's deployment target.
+
+The plugin vendors the three ML Kit frameworks instead of depending on their
+original binary pods. Do not also add `GoogleMLKit/DigitalInkRecognition`,
+`MLKitDigitalInkRecognition`, `MLKitCommon`, or `MLKitMDD` to the same target:
+that would link duplicate copies. Other ML Kit plugins that pull in those pods
+need a shared packaging solution before they can be combined with this version.
+
+### Building the iOS package from source
+
+On a Mac with Xcode command-line tools, Node.js, Ruby, and CocoaPods:
+
+```bash
+npm install
+npm run prepare:ios
+npm run test:ios:packaging
+npm run verify:ios
+npm run verify:ios:simulator -- -destination 'platform=iOS Simulator,id=YOUR_SIMULATOR_UDID'
+npm pack
+```
+
+`prepare:ios` downloads only the pinned Google archives in
+`scripts/mlkit-binaries.json`, verifies their SHA-256 checksums, and generates
+`ios/Frameworks`, `ios/Resources`, and `ios/Notices`. Downloads are cached in
+`.cache/mlkit`. Generated assets are ignored by Git and included in the npm
+package; `prepack` regenerates them for both `npm pack` and `npm publish`.
+Run `prepare:ios` before using a Git checkout as a local Capacitor dependency.
+
+The simulator integration test downloads the English model if necessary and
+runs recognition on sample strokes. Its first run requires internet access.
 
 ## API
 

@@ -7,11 +7,31 @@ def capacitor_pods
   pod 'CapacitorCordova', :path => '../node_modules/@capacitor/ios'
 end
 
-target 'Plugin' do
-  capacitor_pods
-  pod 'GoogleMLKit/DigitalInkRecognition', '9.0.0'
+# Xcode 27 rejects the historical iOS 9-13 deployment targets used by some
+# source dependencies. Keep the verification project at the plugin's minimum.
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      minimum = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+      if minimum && Gem::Version.new(minimum) < Gem::Version.new('15.5')
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
+      end
+    end
+  end
 end
 
-target 'PluginTests' do
+target 'Plugin' do
   capacitor_pods
+  pod 'DigitalInkMLKitRuntime', :path => '.'
+
+  target 'PluginTests' do
+    inherit! :search_paths
+    # Hostless XCTest bundles must embed the dynamic source dependencies, but
+    # must not link a second copy of the ML Kit archives already in Plugin.
+    capacitor_pods
+    runtime = Pod::Specification.from_file(File.join(__dir__, 'DigitalInkMLKitRuntime.podspec'))
+    runtime.dependencies.each do |dependency|
+      pod dependency.name, *dependency.requirement.as_list
+    end
+  end
 end

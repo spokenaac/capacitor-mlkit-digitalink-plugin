@@ -7,6 +7,10 @@ Pods
 Podfile.lock
 Build
 xcuserdata
+ios/Frameworks/
+ios/Resources/
+ios/Notices/
+.cache/
 
 # macOS files
 .DS_Store

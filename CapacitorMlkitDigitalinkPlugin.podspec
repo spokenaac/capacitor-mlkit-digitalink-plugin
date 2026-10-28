@@ -1,4 +1,5 @@
 require 'json'
+require_relative 'ios/mlkit'
 
 package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 
@@ -15,5 +16,5 @@ Pod::Spec.new do |s|
   s.ios.deployment_target  = '15.5'
   s.dependency 'Capacitor'
   s.swift_version = '5.9'
-  s.dependency 'GoogleMLKit/DigitalInkRecognition', '9.0.0'
+  DigitalInkMLKit.configure(s, 'ios/')
 end
